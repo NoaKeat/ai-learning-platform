@@ -1,0 +1,15 @@
+# Ignore database files
+*.db
+*.sql
+
+# Ignore secrets
+appsettings.Local.json
+.env
+
+# Visual Studio / .NET
+bin/
+obj/
+*.user
+*.vs/
+
+
