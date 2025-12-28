@@ -1,15 +1,28 @@
-# Ignore database files
+# ===== Database dumps =====
 *.db
 *.sql
 
-# Ignore secrets
-appsettings.Local.json
+# ===== Secrets / Config =====
 .env
+appsettings.Local.json
+appsettings.json
+*.secret.json
 
-# Visual Studio / .NET
+# ===== .NET =====
 bin/
 obj/
+*.dll
+*.exe
+*.pdb
+
+# ===== Visual Studio =====
+.vs/
 *.user
-*.vs/
+*.suo
 
+# ===== IDEs =====
+.idea/
 
+# ===== OS =====
+.DS_Store
+Thumbs.db
