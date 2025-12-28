@@ -4,9 +4,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using LearningPlatform.Api.Data;
 using Microsoft.AspNetCore.Mvc;
+using LearningPlatform.Api.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IPromptService, PromptService>();
 // Controllers
 builder.Services.AddControllers();
 
