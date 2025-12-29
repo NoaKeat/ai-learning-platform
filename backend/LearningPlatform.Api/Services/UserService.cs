@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using LearningPlatform.Api.Common.Exceptions;
 using LearningPlatform.Api.Data;
 using LearningPlatform.Api.DTOs;
 using LearningPlatform.Api.Models;
@@ -18,7 +19,11 @@ public class UserService : IUserService
     {
         var exists = await _db.Users.AnyAsync(u => u.Phone == dto.Phone);
         if (exists)
-            throw new InvalidOperationException("Phone already exists");
+            throw new BadRequestException(
+                code: "PHONE_ALREADY_EXISTS",
+                message: "Phone already exists",
+                details: new { phone = dto.Phone }
+            );
 
         var user = new User
         {
@@ -40,7 +45,8 @@ public class UserService : IUserService
     public async Task<UserResponse?> GetUserByIdAsync(int id)
     {
         var user = await _db.Users.FindAsync(id);
-        if (user == null) return null;
+        if (user == null)
+            throw NotFoundException.User(id); // ✅ במקום להחזיר null
 
         return new UserResponse
         {

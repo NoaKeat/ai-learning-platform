@@ -5,14 +5,28 @@ using Microsoft.EntityFrameworkCore;
 using LearningPlatform.Api.Data;
 using Microsoft.AspNetCore.Mvc;
 using LearningPlatform.Api.Services;
+using LearningPlatform.Api.Common.Filters;
 
+// ✅ הוסיפי את זה לפי הניימספייס המדויק שלך:
+using LearningPlatform.Api.Common.Middleware; // אם המידלוור נמצא שם
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IPromptService, PromptService>();
+
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationExceptionFilter>();
+});
+
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
 
 // Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -60,7 +74,6 @@ else
     connectionString = "Server=localhost;Port=3306;Database=learning_platform;User=root;Password=;";
 }
 
-
 // EF Core MySQL (בלי AutoDetect)
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 0));
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -68,10 +81,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         mySql => mySql.EnableRetryOnFailure())
 );
 
-
 var app = builder.Build();
 
-// ✅ Auto migrate + seed on startup (רק אחרי app.Build!)
+//
+// ✅ 1) Exception middleware הכי מוקדם שאפשר (אחרי Build)
+//
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+//
+// ✅ 2) Auto migrate + seed on startup
+// (זה לא חלק מה־HTTP pipeline, אבל נשאר בסדר כאן)
+//
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

@@ -1,6 +1,6 @@
+using LearningPlatform.Api.Common.Exceptions;
 using LearningPlatform.Api.Data;
 using LearningPlatform.Api.DTOs;
-using LearningPlatform.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace LearningPlatform.Api.Services;
@@ -14,10 +14,10 @@ public class CategoryService : ICategoryService
         _db = db;
     }
 
-    // GET כל הקטגוריות כולל תתי-קטגוריות
     public async Task<List<CategoryResponse>> GetAllAsync()
     {
         return await _db.Categories
+            .AsNoTracking()
             .Include(c => c.SubCategories)
             .Select(c => new CategoryResponse
             {
@@ -34,15 +34,15 @@ public class CategoryService : ICategoryService
             .ToListAsync();
     }
 
-    // GET לפי שם קטגוריה
-    public async Task<CategoryResponse?> GetByNameAsync(string name)
+    public async Task<CategoryResponse> GetByNameAsync(string name)
     {
         var category = await _db.Categories
+            .AsNoTracking()
             .Include(c => c.SubCategories)
             .FirstOrDefaultAsync(c => c.Name == name);
 
         if (category == null)
-            return null;
+            throw new NotFoundException("CATEGORY_NOT_FOUND", $"Category '{name}' not found", new { name });
 
         return new CategoryResponse
         {

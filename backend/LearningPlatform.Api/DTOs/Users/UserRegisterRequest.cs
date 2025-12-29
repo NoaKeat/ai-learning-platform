@@ -10,6 +10,9 @@ public class UserRegisterRequest
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    [Phone]
+    [RegularExpression(
+        @"^05\d{8}$",
+        ErrorMessage = "Phone must be a valid Israeli number (05XXXXXXXX)"
+    )]
     public string Phone { get; set; } = string.Empty;
 }

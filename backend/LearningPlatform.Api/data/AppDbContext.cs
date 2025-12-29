@@ -40,11 +40,13 @@ namespace LearningPlatform.Api.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Prompt -> SubCategory (Many Prompts to One SubCategory)
+            // Prompt -> SubCategory (Many Prompts to One SubCategory)
             modelBuilder.Entity<Prompt>()
                 .HasOne(p => p.SubCategory)
-                .WithMany()
+                .WithMany(sc => sc.Prompts)     // ✅ במקום WithMany()
                 .HasForeignKey(p => p.SubCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+
 
             // ========= Seed Data =========
             // חשוב: HasData חייב Id קבועים (כי EF מייצר INSERT/UPDATE לפי המפתחות).

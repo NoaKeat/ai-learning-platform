@@ -5,5 +5,7 @@ namespace LearningPlatform.Api.Services;
 public interface ICategoryService
 {
     Task<List<CategoryResponse>> GetAllAsync();
-    Task<CategoryResponse?> GetByNameAsync(string name);
+    Task<CategoryResponse> GetByNameAsync(string name);
+
 }
+

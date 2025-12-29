@@ -1,3 +1,4 @@
+using LearningPlatform.Api.Common.Exceptions;
 using LearningPlatform.Api.Data;
 using LearningPlatform.Api.DTOs;
 using LearningPlatform.Api.Models;
@@ -16,19 +17,22 @@ public class PromptService : IPromptService
 
     public async Task<PromptResponse> CreatePromptAsync(PromptCreateRequest dto)
     {
-        // 1) בדיקות קיום
+        // 1) בדיקות קיום (לפי המשימה: userId/categoryId -> 404)
         var userExists = await _db.Users.AnyAsync(u => u.Id == dto.UserId);
-        if (!userExists) throw new KeyNotFoundException("User not found");
+        if (!userExists)
+            throw NotFoundException.User(dto.UserId);
 
         var categoryExists = await _db.Categories.AnyAsync(c => c.Id == dto.CategoryId);
-        if (!categoryExists) throw new KeyNotFoundException("Category not found");
+        if (!categoryExists)
+            throw NotFoundException.Category(dto.CategoryId);
 
         var sub = await _db.SubCategories.FirstOrDefaultAsync(sc => sc.Id == dto.SubCategoryId);
-        if (sub == null) throw new KeyNotFoundException("SubCategory not found");
+        if (sub == null)
+            throw NotFoundException.SubCategory(dto.SubCategoryId);
 
-        // 2) בדיקה ש־SubCategory שייך ל־Category
+        // 2) בדיקה ש־SubCategory שייך ל־Category (לפי המשימה -> 400)
         if (sub.CategoryId != dto.CategoryId)
-            throw new InvalidOperationException("SubCategory does not belong to the selected Category");
+            throw BadRequestException.SubCategoryMismatch(dto.SubCategoryId, dto.CategoryId, sub.CategoryId);
 
         // 3) MOCK Response (מחר מחליפים ב-OpenAI)
         var mockResponse =
@@ -62,11 +66,13 @@ public class PromptService : IPromptService
 
     public async Task<List<PromptResponse>> GetUserHistoryAsync(int userId)
     {
-        // אופציונלי: לוודא שהמשתמש קיים
+        // אם המשתמש לא קיים -> 404 (לפי ההנחיות שלך)
         var userExists = await _db.Users.AnyAsync(u => u.Id == userId);
-        if (!userExists) throw new KeyNotFoundException("User not found");
+        if (!userExists)
+            throw NotFoundException.User(userId);
 
         return await _db.Prompts
+            .AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new PromptResponse

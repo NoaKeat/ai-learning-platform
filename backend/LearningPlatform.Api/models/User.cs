@@ -7,3 +7,4 @@ public class User
     public string Phone { get; set; }         // טלפון
     public ICollection<Prompt> Prompts { get; set; }  // כל ההיסטוריה של הפקודות שהמשתמש שלח
 }
+
