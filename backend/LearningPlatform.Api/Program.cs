@@ -10,11 +10,15 @@ using LearningPlatform.Api.Common.Filters;
 // ✅ הוסיפי את זה לפי הניימספייס המדויק שלך:
 using LearningPlatform.Api.Common.Middleware; // אם המידלוור נמצא שם
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IPromptService, PromptService>();
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IAiService, OpenAiService>();
 
 // Controllers
 builder.Services.AddControllers(options =>
@@ -31,10 +35,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 // Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.SuppressModelStateInvalidFilter = false;
-});
 
 /*
    DB Connection logic:

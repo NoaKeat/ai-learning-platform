@@ -2,6 +2,9 @@ services:
   mysql:
     image: mysql:8
     container_name: learning-mysql
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -23,13 +26,25 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
+      # DB
       DB_HOST: mysql
       DB_PORT: 3306
       DB_NAME: ${MYSQL_DATABASE}
       DB_USER: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+      # ✅ OpenAI
+      # ✅ OpenAI (נכון ל-.NET IConfiguration)
+      OpenAI__ApiKey: ${OPENAI_API_KEY}
+      OpenAI__Model: ${OPENAI_MODEL:-gpt-4o-mini}
+
+
     ports:
       - "8080:8080"
 

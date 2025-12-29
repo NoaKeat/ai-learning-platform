@@ -1,3 +1,4 @@
+using LearningPlatform.Api.Common.Exceptions;
 using LearningPlatform.Api.DTOs;
 using LearningPlatform.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -5,45 +6,40 @@ using Microsoft.AspNetCore.Mvc;
 namespace LearningPlatform.Api.Controllers;
 
 [ApiController]
-[Route("api/prompts")]
+[Route("api/[controller]")]
 public class PromptsController : ControllerBase
 {
-    private readonly IPromptService _prompts;
+    private readonly IPromptService _promptService;
 
-    public PromptsController(IPromptService prompts)
+    public PromptsController(IPromptService promptService)
     {
-        _prompts = prompts;
+        _promptService = promptService;
     }
 
+    // POST /api/prompts
     [HttpPost]
-    public async Task<ActionResult<PromptResponse>> Create([FromBody] PromptCreateRequest req)
+    public async Task<ActionResult<PromptResponse>> Create([FromBody] PromptCreateRequest dto)
     {
-        try
-        {
-            var result = await _prompts.CreatePromptAsync(req);
-            return CreatedAtAction(nameof(GetHistory), new { userId = result.UserId }, result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        // ה-ValidationExceptionFilter שלך יתפוס ModelState לא תקין ויזרוק BadRequestException (400) בצורה אחידה
+        var result = await _promptService.CreatePromptAsync(dto);
+        return Ok(result);
     }
 
-    [HttpGet("history/{userId:int}")]
-    public async Task<ActionResult<List<PromptResponse>>> GetHistory(int userId)
+    // GET /api/prompts/history?userId=1
+    [HttpGet("history")]
+    public async Task<ActionResult<List<PromptResponse>>> History([FromQuery] int userId)
     {
-        try
+        if (userId <= 0)
         {
-            var result = await _prompts.GetUserHistoryAsync(userId);
-            return Ok(result);
+            // במקום ProblemDetails ידני — זורקים ApiException וה-Middleware מחזיר ProblemDetails אחיד
+            throw new BadRequestException(
+                code: "VALIDATION_ERROR",
+                message: "userId must be a positive integer.",
+                details: new { userId }
+            );
         }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+
+        var items = await _promptService.GetUserHistoryAsync(userId);
+        return Ok(items);
     }
 }

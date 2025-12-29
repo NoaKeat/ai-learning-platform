@@ -9,8 +9,18 @@ COPY . ./
 RUN dotnet publish -c Release -o /app/publish
 
 # ===== Runtime stage =====
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
+
+# 🔐 תעודות SSL + נטפרי
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && update-ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN update-ca-certificates
+
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 

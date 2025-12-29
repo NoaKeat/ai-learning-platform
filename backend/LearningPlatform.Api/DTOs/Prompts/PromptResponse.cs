@@ -9,4 +9,7 @@ public class PromptResponse
     public string Prompt { get; set; } = string.Empty;
     public string Response { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public string? CategoryName { get; set; }
+    public string? SubCategoryName { get; set; }
+
 }

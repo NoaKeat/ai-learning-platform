@@ -1,15 +1,17 @@
 using System.Net;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;                 // ✅ הוספתי (HttpContext, RequestDelegate)
-using Microsoft.Extensions.Hosting;              // ✅ הוספתי (IHostEnvironment)
 using LearningPlatform.Api.Common.Exceptions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace LearningPlatform.Api.Common.Middleware;
 
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IHostEnvironment _env;      // ✅ הוספתי כדי לדעת Dev/Prod
+    private readonly IHostEnvironment _env;
 
     public ExceptionHandlingMiddleware(RequestDelegate next, IHostEnvironment env)
     {
@@ -25,47 +27,68 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            // ✅ אם כבר התחילו לשלוח תשובה (headers/body) אי אפשר “להחליף” ל-JSON
             if (ctx.Response.HasStarted)
                 throw;
 
-            if (ex is ApiException apiEx)
+            // 400 - ולידציה/טיעונים לא תקינים
+            if (ex is ArgumentException argEx)
             {
-                await Write(ctx, apiEx.StatusCode, apiEx.Code, apiEx.Message, apiEx.Details);
+                await WriteProblem(ctx, HttpStatusCode.BadRequest, "ARGUMENT_ERROR", argEx.Message, null);
                 return;
             }
 
-            // ✅ Dev: תני לעצמך קצת יותר מידע (לריאקט זה עדיין אחיד)
-            // ✅ Prod: הודעה כללית בלי לחשוף פרטים
-            var details = _env.IsDevelopment()
+            // 409 - התנגשות/Constraint DB
+            if (ex is DbUpdateException)
+            {
+                await WriteProblem(ctx, HttpStatusCode.Conflict, "DB_CONFLICT",
+                    "Database constraint violation.", null);
+                return;
+            }
+
+            // ApiException -> סטטוס לפי מה שהגדרת
+            if (ex is ApiException apiEx)
+            {
+                await WriteProblem(ctx, apiEx.StatusCode, apiEx.Code, apiEx.Message, apiEx.Details);
+                return;
+            }
+
+            // 500 - לא צפוי
+            var devDetails = _env.IsDevelopment()
                 ? new { exception = ex.GetType().Name, message = ex.Message }
                 : null;
 
-            await Write(ctx, HttpStatusCode.InternalServerError,
+            await WriteProblem(ctx, HttpStatusCode.InternalServerError,
                 "INTERNAL_ERROR",
                 "An unexpected error occurred.",
-                details);
+                devDetails);
         }
     }
 
-    private static async Task Write(HttpContext ctx, HttpStatusCode status, string code, string message, object? details)
+    private static async Task WriteProblem(HttpContext ctx, HttpStatusCode status, string code, string message, object? details)
     {
-        ctx.Response.Clear();                    // ✅ מנקה headers/body שנכתבו חלקית
-        ctx.Response.ContentType = "application/json";
+        ctx.Response.Clear();
         ctx.Response.StatusCode = (int)status;
+        ctx.Response.ContentType = "application/problem+json";
 
-        var payload = new
+        var problem = new ProblemDetails
         {
-            error = new
+            Status = (int)status,
+            Title = ((int)status) switch
             {
-                code,
-                message,
-                details,
-                traceId = ctx.TraceIdentifier
-            }
+                400 => "Bad Request",
+                404 => "Not Found",
+                409 => "Conflict",
+                500 => "Internal Server Error",
+                _ => "Error"
+            },
+            Detail = message,
+            Instance = ctx.Request.Path
         };
 
-        var json = JsonSerializer.Serialize(payload);
-        await ctx.Response.WriteAsync(json);
+        problem.Extensions["code"] = code;
+        problem.Extensions["details"] = details;
+        problem.Extensions["traceId"] = ctx.TraceIdentifier;
+
+        await ctx.Response.WriteAsync(JsonSerializer.Serialize(problem));
     }
 }

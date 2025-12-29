@@ -5,7 +5,7 @@
 # ===== Secrets / Config =====
 .env
 appsettings.Local.json
-appsettings.json
+appsettings.Development.json
 *.secret.json
 
 # ===== .NET =====

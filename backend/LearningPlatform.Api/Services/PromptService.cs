@@ -9,10 +9,12 @@ namespace LearningPlatform.Api.Services;
 public class PromptService : IPromptService
 {
     private readonly AppDbContext _db;
+    private readonly IAiService _ai;
 
-    public PromptService(AppDbContext db)
+    public PromptService(AppDbContext db, IAiService ai)
     {
         _db = db;
+        _ai = ai;
     }
 
     public async Task<PromptResponse> CreatePromptAsync(PromptCreateRequest dto)
@@ -22,11 +24,17 @@ public class PromptService : IPromptService
         if (!userExists)
             throw NotFoundException.User(dto.UserId);
 
-        var categoryExists = await _db.Categories.AnyAsync(c => c.Id == dto.CategoryId);
-        if (!categoryExists)
+        var category = await _db.Categories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == dto.CategoryId);
+
+        if (category == null)
             throw NotFoundException.Category(dto.CategoryId);
 
-        var sub = await _db.SubCategories.FirstOrDefaultAsync(sc => sc.Id == dto.SubCategoryId);
+        var sub = await _db.SubCategories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(sc => sc.Id == dto.SubCategoryId);
+
         if (sub == null)
             throw NotFoundException.SubCategory(dto.SubCategoryId);
 
@@ -34,24 +42,25 @@ public class PromptService : IPromptService
         if (sub.CategoryId != dto.CategoryId)
             throw BadRequestException.SubCategoryMismatch(dto.SubCategoryId, dto.CategoryId, sub.CategoryId);
 
-        // 3) MOCK Response (מחר מחליפים ב-OpenAI)
-        var mockResponse =
-            $"(MOCK) Lesson for '{dto.Prompt}' in {dto.CategoryId}/{dto.SubCategoryId}: " +
-            "Here is a short explanation + key points + a mini quiz.";
+        // 3) AI Response (Mock/OpenAI) דרך IAiService
+        var topic = $"{category.Name} > {sub.Name}";
+        var aiResponse = await _ai.GenerateLessonAsync(topic, dto.Prompt);
 
+        // 4) שמירה ל־DB
         var entity = new Prompt
         {
             UserId = dto.UserId,
             CategoryId = dto.CategoryId,
             SubCategoryId = dto.SubCategoryId,
             Input = dto.Prompt,
-            Response = mockResponse,
+            Response = aiResponse,
             CreatedAt = DateTime.UtcNow
         };
 
         _db.Prompts.Add(entity);
         await _db.SaveChangesAsync();
 
+        // 5) החזרת DTO (הוספתי שמות כדי ש-Create יחזיר "עשיר" כמו History)
         return new PromptResponse
         {
             Id = entity.Id,
@@ -59,23 +68,30 @@ public class PromptService : IPromptService
             CategoryId = entity.CategoryId,
             SubCategoryId = entity.SubCategoryId,
             Prompt = entity.Input,
-            Response = entity.Response,
-            CreatedAt = entity.CreatedAt
+            Response = aiResponse,
+            CreatedAt = entity.CreatedAt,
+
+            // אם הוספת שדות DTO לשמות:
+            CategoryName = category.Name,
+            SubCategoryName = sub.Name
         };
     }
 
     public async Task<List<PromptResponse>> GetUserHistoryAsync(int userId)
     {
-        // אם המשתמש לא קיים -> 404 (לפי ההנחיות שלך)
+        // אם המשתמש לא קיים -> 404
         var userExists = await _db.Users.AnyAsync(u => u.Id == userId);
         if (!userExists)
             throw NotFoundException.User(userId);
 
-        return await _db.Prompts
-            .AsNoTracking()
-            .Where(p => p.UserId == userId)
-            .OrderByDescending(p => p.CreatedAt)
-            .Select(p => new PromptResponse
+        // History עם שמות (join) + מיון לפי CreatedAt desc
+        var query =
+            from p in _db.Prompts.AsNoTracking()
+            join c in _db.Categories.AsNoTracking() on p.CategoryId equals c.Id
+            join sc in _db.SubCategories.AsNoTracking() on p.SubCategoryId equals sc.Id
+            where p.UserId == userId
+            orderby p.CreatedAt descending
+            select new PromptResponse
             {
                 Id = p.Id,
                 UserId = p.UserId,
@@ -83,8 +99,13 @@ public class PromptService : IPromptService
                 SubCategoryId = p.SubCategoryId,
                 Prompt = p.Input,
                 Response = p.Response,
-                CreatedAt = p.CreatedAt
-            })
-            .ToListAsync();
+                CreatedAt = p.CreatedAt,
+
+                // אם הוספת שדות DTO לשמות:
+                CategoryName = c.Name,
+                SubCategoryName = sc.Name
+            };
+
+        return await query.ToListAsync();
     }
 }
