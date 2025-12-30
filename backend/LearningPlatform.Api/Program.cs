@@ -6,12 +6,20 @@ using LearningPlatform.Api.Data;
 using Microsoft.AspNetCore.Mvc;
 using LearningPlatform.Api.Services;
 using LearningPlatform.Api.Common.Filters;
-
-// ✅ הוסיפי את זה לפי הניימספייס המדויק שלך:
-using LearningPlatform.Api.Common.Middleware; // אם המידלוור נמצא שם
-
+using LearningPlatform.Api.Common.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ✅ CORS — מאפשר ל-React (5173) לגשת ל-API (8080)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+        // .AllowCredentials() // תפעילי רק אם את משתמשת ב-cookies/auth עם credentials
+    );
+});
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -25,7 +33,6 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationExceptionFilter>();
 });
-
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
@@ -49,7 +56,6 @@ var dbName = Environment.GetEnvironmentVariable("DB_NAME");
 var dbUser = Environment.GetEnvironmentVariable("DB_USER");
 var dbPass = Environment.GetEnvironmentVariable("DB_PASSWORD");
 
-// אם יש DB_HOST => אנחנו בדוקר/קומפוז, אז ENV קודם
 var hasDockerEnv = !string.IsNullOrWhiteSpace(dbHost);
 
 string connectionString;
@@ -70,28 +76,23 @@ else if (!string.IsNullOrWhiteSpace(connFromConfig))
 }
 else
 {
-    // fallback מקומי אם אין כלום
     connectionString = "Server=localhost;Port=3306;Database=learning_platform;User=root;Password=;";
 }
 
-// EF Core MySQL (בלי AutoDetect)
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 0));
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, serverVersion,
-        mySql => mySql.EnableRetryOnFailure())
+    options.UseMySql(connectionString, serverVersion, mySql => mySql.EnableRetryOnFailure())
 );
 
 var app = builder.Build();
 
-//
-// ✅ 1) Exception middleware הכי מוקדם שאפשר (אחרי Build)
-//
+// ✅ 1) Middleware לחריגות (כמו אצלך)
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-//
-// ✅ 2) Auto migrate + seed on startup
-// (זה לא חלק מה־HTTP pipeline, אבל נשאר בסדר כאן)
-//
+// ✅ 2) CORS חייב להיות מוקדם, לפני MapControllers (ולפני Authorization)
+app.UseCors("Frontend");
+
+// ✅ 3) Auto migrate + seed on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
