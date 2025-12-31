@@ -16,31 +16,30 @@ public class UserService : IUserService
     }
 
     public async Task<UserResponse> RegisterUserAsync(UserRegisterRequest dto)
+{
+    var phone = dto.Phone.Trim();
+    var name = dto.Name.Trim();
+
+    var exists = await _db.Users.AnyAsync(u => u.Phone == phone);
+    if (exists)
+        throw ConflictException.PhoneAlreadyExists(phone);
+
+    var user = new User
     {
-        var exists = await _db.Users.AnyAsync(u => u.Phone == dto.Phone);
-        if (exists)
-            throw new BadRequestException(
-                code: "PHONE_ALREADY_EXISTS",
-                message: "Phone already exists",
-                details: new { phone = dto.Phone }
-            );
+        Name = name,
+        Phone = phone
+    };
 
-        var user = new User
-        {
-            Name = dto.Name.Trim(),
-            Phone = dto.Phone.Trim()
-        };
+    _db.Users.Add(user);
+    await _db.SaveChangesAsync();
 
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
-
-        return new UserResponse
-        {
-            Id = user.Id,
-            Name = user.Name,
-            Phone = user.Phone
-        };
-    }
+    return new UserResponse
+    {
+        Id = user.Id,
+        Name = user.Name,
+        Phone = user.Phone
+    };
+}
 
     public async Task<UserResponse?> GetUserByIdAsync(int id)
     {
@@ -55,4 +54,27 @@ public class UserService : IUserService
             Phone = user.Phone
         };
     }
+    public async Task<UserResponse> LoginUserAsync(UserLoginRequest dto)
+    {
+        var phone = dto.Phone.Trim();
+
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Phone == phone);
+
+        if (user == null)
+            throw new NotFoundException(
+                code: "USER_NOT_FOUND",
+                message: "User does not exist. Please sign up first.",
+                details: new { phone }
+            );
+
+        return new UserResponse
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Phone = user.Phone
+        };
+    }
+
 }

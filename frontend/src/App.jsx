@@ -1,7 +1,7 @@
-
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Register from "./pages/Register";
+import Login from "./pages/Login";
 import Learn from "./pages/Learn";
 
 function isAuthedValue() {
@@ -14,10 +14,7 @@ export default function App() {
   useEffect(() => {
     const sync = () => setAuthed(isAuthedValue());
 
-    // ✅ אירוע שאנחנו נירה אחרי login/logout (אותו טאאב)
     window.addEventListener("auth-changed", sync);
-
-    // ✅ אירוע מובנה – עובד כשמשנים localStorage מטאב אחר
     window.addEventListener("storage", sync);
 
     return () => {
@@ -28,10 +25,19 @@ export default function App() {
 
   return (
     <Routes>
+      {/* default: go to register if not authed, else learn */}
+      <Route path="/" element={<Navigate to={authed ? "/learn" : "/register"} replace />} />
+
       {/* Register */}
       <Route
         path="/register"
         element={authed ? <Navigate to="/learn" replace /> : <Register />}
+      />
+
+      {/* Login */}
+      <Route
+        path="/login"
+        element={authed ? <Navigate to="/learn" replace /> : <Login />}
       />
 
       {/* Learn (protected) */}

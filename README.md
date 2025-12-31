@@ -1,77 +1,37 @@
 AI-Driven Learning Platform (Mini MVP)
 📌 Overview
 
-This project is a full-stack Mini MVP for an AI-driven learning platform, built with a production-grade backend and a modern React frontend.
+This repository contains a full-stack Mini MVP for an AI-driven learning platform.
 
-The platform allows users to:
+The system allows users to choose what they want to learn (by category and sub-category), submit learning prompts, receive AI-generated lessons, and review their personal learning history.
 
-Register to the system
+The project was built to demonstrate software architecture skills, clean API design, frontend-backend integration, and delivery quality, with a strong emphasis on clarity, maintainability, and correctness.
 
-Choose learning categories and sub-categories
+🎯 Product Capabilities
+User Flow
 
-Submit learning prompts
+Register as a new user (Sign-Up)
 
-Receive AI-generated lessons (via AI service abstraction)
+Log in as an existing user (Log-In)
 
-View their personal learning history
+Select learning categories and sub-categories
 
-The project emphasizes clean architecture, correctness, robustness, and clear separation of concerns, rather than feature bloat.
+Submit a learning prompt
 
-🎯 Implemented Features
-🔧 Backend (ASP.NET Core)
+Receive an AI-generated lesson
 
-✅ User registration with validation
+View personal learning history
 
-✅ Categories & sub-categories (auto-seeded on startup)
+Admin Flow
 
-✅ Prompt submission with stored AI responses
+View all registered users
 
-✅ User learning history (sorted by creation date)
+View prompt history per user (admin dashboard)
 
-✅ DTO-based API (no domain model exposure)
+🧱 Architecture Overview
 
-✅ Clear service layer with enforced business rules
+The system is built with clearly separated layers and follows production-grade design principles.
 
-✅ Unified exception & error-handling strategy
-
-✅ Validation pipeline converted to domain exceptions
-
-✅ Consistent error responses using ProblemDetails
-
-✅ Swagger / OpenAPI documentation
-
-✅ Dockerized MySQL database
-
-✅ Environment-based configuration (Local / Docker)
-
-🎨 Frontend (React)
-
-✅ Complete React client application
-
-✅ Registration (Sign-Up) flow with validation
-
-✅ Protected learning dashboard (route guards)
-
-✅ Category & sub-category selection
-
-✅ Prompt submission and AI response display
-
-✅ User learning history with details modal
-
-✅ Controlled form state and safe side-effects
-
-✅ Basic responsive UI and layout
-
-✅ Clean API integration with backend
-
-✅ Centralized user state via localStorage utilities
-
-✅ Reactive authentication flow (login/logout without page refresh)
-
-
-⚠️ Frontend Dockerization is planned but intentionally deferred to a follow-up step.
-
-🏗️ Architecture
 Backend
 
 Framework: ASP.NET Core Web API
@@ -80,15 +40,15 @@ Database: MySQL
 
 ORM: Entity Framework Core
 
-Pattern: Controllers → Services → Data
+Architecture: Controllers → Services → Data
 
-Validation: DTO validation → Domain exceptions
+Validation: DTO validation → domain exceptions
 
-Error Handling: Global Exception Middleware
-
-Containerization: Docker & Docker Compose
+Error Handling: Global exception middleware
 
 API Documentation: Swagger / OpenAPI
+
+Containerization: Docker & Docker Compose
 
 Frontend
 
@@ -98,45 +58,80 @@ Routing: React Router
 
 State Management: Local component state + localStorage
 
-UI: Component-based layout with basic styling
+API Communication: Fetch-based REST abstraction
 
-API Communication: Fetch-based REST integration
+Route Protection: Guarded routes for authenticated users
 
-Routing Guards: Centralized at Router level
+UI: Simple, functional dashboard (focus on behavior, not styling)
 
-🧠 Error Handling & Validation (Backend)
+🔧 Backend Features
 
-The API uses a unified error-handling strategy based on domain exceptions
-and a global exception middleware.
+User registration (Sign-Up)
 
-All errors are returned using the ProblemDetails format:
+User login (Log-In)
+
+Category & sub-category retrieval (auto-seeded)
+
+Prompt submission with stored AI responses
+
+User-scoped learning history
+
+Admin endpoints for user & prompt inspection
+
+Strict DTO-based API (no entity exposure)
+
+Unified error handling using ProblemDetails
+
+Environment-based configuration (Local / Docker)
+
+🎨 Frontend Features
+
+Dedicated Sign-Up and Log-In pages
+
+Automatic navigation based on backend responses
+
+Protected learning dashboard
+
+Category & sub-category selection flow
+
+Prompt submission and AI response rendering
+
+Learning history view per user
+
+Admin dashboard for system-wide inspection
+
+Clean component structure with controlled side-effects
+
+Frontend Dockerization was intentionally deferred to keep the MVP focused.
+
+🧠 Error Handling Strategy
+
+The backend uses a single, unified error-handling mechanism based on domain exceptions and a global middleware.
+
+All errors are returned in a frontend-friendly ProblemDetails format:
 
 {
-  "type": "about:blank",
   "title": "Bad Request",
   "status": 400,
   "detail": "Validation failed",
   "instance": "/api/prompts",
   "extensions": {
     "code": "VALIDATION_ERROR",
-    "details": {},
     "traceId": "00-acde..."
   }
 }
 
-Error Sources
+Error Mapping
 
-Request validation errors → 400 Bad Request
+Validation errors → 400 Bad Request
 
 Business rule violations → 400 Bad Request
 
-Missing resources → 404 Not Found
+Resource not found → 404 Not Found
 
-Database conflicts → 409 Conflict
+Data conflicts → 409 Conflict
 
 Unhandled errors → 500 Internal Server Error
-
-This ensures consistent, frontend-ready error responses.
 
 🗂️ Project Structure
 ai-learning-platform/
@@ -152,17 +147,18 @@ ai-learning-platform/
 │       │   ├── Middleware/
 │       │   └── Filters/
 │       ├── Program.cs
-│       ├── Dockerfile
-│       └── LearningPlatform.Api.csproj
+│       └── Dockerfile
 ├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   ├── api/
-│   │   ├── utils/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── package.json
+│   └── src/
+│       ├── pages/
+│       │   ├── SignUp.jsx
+│       │   ├── Login.jsx
+│       │   ├── Learn.jsx
+│       │   └── Admin.jsx
+│       ├── components/
+│       ├── api/
+│       ├── utils/
+│       └── App.jsx
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -170,37 +166,29 @@ ai-learning-platform/
 🧱 Database Schema
 Tables
 
-Users
+users: id, name, phone
 
-id, name, phone
+categories: id, name
 
-Categories
+sub_categories: id, name, category_id
 
-id, name
-
-SubCategories
-
-id, name, category_id
-
-Prompts
-
-id, user_id, category_id, sub_category_id, prompt, response, created_at
+prompts: id, user_id, category_id, sub_category_id, prompt, response, created_at
 
 Relationships
 
-Category → many SubCategories
-
 User → many Prompts
+
+Category → many SubCategories
 
 Prompt → Category & SubCategory
 
-🧪 Seed Data
+🌱 Seed Data
 
-On first startup, the database is automatically seeded with:
+On first startup, the database is automatically seeded with sample data:
 
 Science → Space, Biology
 
-Tech → AI, Web Dev
+Tech → AI, Web Development
 
 Math → Algebra, Calculus
 
@@ -208,82 +196,55 @@ History → Ancient, Modern
 
 Seeding runs once and is skipped if data already exists.
 
-🐳 Running with Docker (Backend)
+🐳 Running the Project Locally
 Prerequisites
 
 Docker
 
 Docker Compose
 
+Node.js (for frontend)
+
 Environment Variables
 
-Create a .env file (not committed):
+Create a .env file (example provided in .env.example):
 
 MYSQL_ROOT_PASSWORD=your_password
 MYSQL_DATABASE=learning_platform
 OPENAI_API_KEY=your_key
 OPENAI_MODEL=gpt-4o-mini
 
-
-An example is provided in .env.example.
-
-Build & Run
+Backend
 docker compose up --build
 
-Verify
 
 Swagger UI: http://localhost:8080/swagger
 
-MySQL: port 3306 (persistent volume)
+MySQL: port 3306
 
-🧪 API Endpoints (Summary)
-Users
+Frontend
+cd frontend
+npm install
+npm run dev
 
-POST /api/users/register
 
-GET /api/users/{id}
-
-Categories
-
-GET /api/categories
-
-GET /api/categories/by-name/{name}
-
-Prompts
-
-POST /api/prompts
-
-GET /api/prompts/history?userId={userId}
-
-⚙️ Configuration Strategy
-
-Local development: appsettings.Development.json
-
-Docker: Environment variables
-
-Database connection adapts automatically per environment
+Frontend: http://localhost:5173
 
 🚀 Future Improvements
 
-Full OpenAI GPT API integration
+JWT-based authentication & authorization
 
-Authentication & authorization (JWT)
+Pagination and filtering in admin dashboard
 
-Pagination & filtering
-
-Unit & integration tests
+Automated unit & integration tests
 
 Frontend Dockerization
 
-Improved UI/UX polish
+UI/UX refinement
+
+Deployment to cloud environment
 
 👩‍💻 Author
 
-Developed as part of an AI-Driven Learning Platform – Mini MVP programming task.
-
-✅ Recommended Commits
-🔹 Backend Core
-git commit -m "feat: add user prompt history and unified error handling"
-
-🔹 Frontend Completion
-git commit -m "feat(frontend): complete React client with learning flow and basic UI"
+Developed as part of an AI-Driven Learning Platform – Mini MVP task
+to demonstrate full-stack architecture, API design, and frontend integration skills.

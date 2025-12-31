@@ -14,12 +14,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-        // .AllowCredentials() // תפעילי רק אם את משתמשת ב-cookies/auth עם credentials
+        policy.WithOrigins(
+                "http://localhost:3000", // ✅ Docker+nginx
+                "http://localhost:5173"  // ✅ Vite dev (אם תריצי בלי Docker)
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
     );
 });
+
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();

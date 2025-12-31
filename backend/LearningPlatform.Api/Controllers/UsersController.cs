@@ -16,24 +16,23 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<ActionResult<UserResponse>> Register(UserRegisterRequest req)
+    public async Task<ActionResult<UserResponse>> Register([FromBody] UserRegisterRequest req)
     {
-        try
-        {
-            var user = await _users.RegisterUserAsync(req);
-            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
+        var user = await _users.RegisterUserAsync(req);
+        return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+    }
+
+    [HttpPost("login")]
+    public async Task<ActionResult<UserResponse>> Login([FromBody] UserLoginRequest req)
+    {
+        var user = await _users.LoginUserAsync(req);
+        return Ok(user);
     }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<UserResponse>> GetById(int id)
     {
-        var user = await _users.GetUserByIdAsync(id);
-        if (user == null) return NotFound();
+        var user = await _users.GetUserByIdAsync(id); // אם לא קיים -> NotFoundException
         return Ok(user);
     }
 }

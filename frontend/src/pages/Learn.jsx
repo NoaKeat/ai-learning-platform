@@ -6,12 +6,15 @@ import PromptForm from "../components/learning/PromptForm";
 import ResponsePanel from "../components/learning/ResponsePanel";
 import HistoryList from "../components/learning/HistoryList";
 import HistoryDetailsModal from "../components/learning/HistoryDetailsModal";
+import { Navigate } from "react-router-dom";
+
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function Learn() {
+  
   const userId = localStorage.getItem("userId");
-  if (!userId) return null;
+  if (!userId) return <Navigate to="/login" replace />;
 
   // Categories
   const [categories, setCategories] = useState([]);
