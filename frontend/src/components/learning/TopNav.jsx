@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,13 +12,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { BookOpen, LogOut, Phone } from "lucide-react";
+import { BookOpen, LogOut, Phone, Shield } from "lucide-react";
 
 // ✅ משתמשים ב-storage שלך (כמו שביקשת “לא לפגוע בדברים”)
 import { clearUser, getUserName } from "../../utils/storage";
 
 export default function TopNav() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const isLearnPage = pathname === "/learn";
 
   // ✅ אותם שמות שמורים ב-localStorage אצלך
   const userName = getUserName() || "User";
@@ -36,9 +39,13 @@ export default function TopNav() {
   };
 
   const handleLogout = () => {
-    // ✅ ניקוי דרך הפונקציה שלך (שומר תאימות)
     clearUser();
-    navigate("/register");
+    navigate("/register", { replace: true });
+  };
+
+  const openAdminAuth = () => {
+    // Learn.jsx יאזין לזה ויפתח modal
+    window.dispatchEvent(new CustomEvent("open-admin-auth"));
   };
 
   return (
@@ -56,15 +63,30 @@ export default function TopNav() {
           </Link>
 
           {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-1">
-            <Link to="/learn">
+          <div className="hidden md:flex items-center gap-2">
+            {/* ✅ במקום כפתור Learn שהיה - כפתור Admin רק ב-Learn */}
+            {isLearnPage && (
               <Button
-                variant="ghost"
-                className="text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                variant="outline"
+                onClick={openAdminAuth}
+                className="border-slate-200 hover:bg-white"
               >
-                Learn
+                <Shield className="w-4 h-4 mr-2" />
+                Admin
               </Button>
-            </Link>
+            )}
+
+            {/* אם את רוצה בעתיד כפתור חזרה ל-Learn מדפים אחרים - אפשר להחזיר */}
+            {!isLearnPage && (
+              <Link to="/learn">
+                <Button
+                  variant="ghost"
+                  className="text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                >
+                  Learn
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* User Menu */}

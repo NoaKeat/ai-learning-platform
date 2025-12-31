@@ -16,30 +16,44 @@ public class UserService : IUserService
     }
 
     public async Task<UserResponse> RegisterUserAsync(UserRegisterRequest dto)
-{
-    var phone = dto.Phone.Trim();
-    var name = dto.Name.Trim();
-
-    var exists = await _db.Users.AnyAsync(u => u.Phone == phone);
-    if (exists)
-        throw ConflictException.PhoneAlreadyExists(phone);
-
-    var user = new User
     {
-        Name = name,
-        Phone = phone
-    };
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            throw new BadRequestException(
+                code: "VALIDATION_ERROR",
+                message: "Name is required.",
+                details: new { dto.Name }
+            );
 
-    _db.Users.Add(user);
-    await _db.SaveChangesAsync();
+        if (string.IsNullOrWhiteSpace(dto.Phone))
+            throw new BadRequestException(
+                code: "VALIDATION_ERROR",
+                message: "Phone is required.",
+                details: new { dto.Phone }
+            );
 
-    return new UserResponse
-    {
-        Id = user.Id,
-        Name = user.Name,
-        Phone = user.Phone
-    };
-}
+        var phone = dto.Phone.Trim();
+        var name = dto.Name.Trim();
+
+        var exists = await _db.Users.AnyAsync(u => u.Phone == phone);
+        if (exists)
+            throw ConflictException.PhoneAlreadyExists(phone);
+
+        var user = new User
+        {
+            Name = name,
+            Phone = phone
+        };
+
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        return new UserResponse
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Phone = user.Phone
+        };
+    }
 
     public async Task<UserResponse?> GetUserByIdAsync(int id)
     {
@@ -54,8 +68,16 @@ public class UserService : IUserService
             Phone = user.Phone
         };
     }
+
     public async Task<UserResponse> LoginUserAsync(UserLoginRequest dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.Phone))
+            throw new BadRequestException(
+                code: "VALIDATION_ERROR",
+                message: "Phone is required.",
+                details: new { dto.Phone }
+            );
+
         var phone = dto.Phone.Trim();
 
         var user = await _db.Users
@@ -76,5 +98,4 @@ public class UserService : IUserService
             Phone = user.Phone
         };
     }
-
 }

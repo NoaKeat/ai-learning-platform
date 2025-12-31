@@ -31,6 +31,8 @@ builder.Services.AddScoped<IPromptService, PromptService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAiService, OpenAiService>();
 
+builder.Services.AddScoped<IAdminService, AdminService>();
+
 // Controllers
 builder.Services.AddControllers(options =>
 {
