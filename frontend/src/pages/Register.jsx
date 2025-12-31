@@ -3,6 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/apiClient";
 import { setUser } from "../utils/storage";
 
+import UnexpectedErrorAlert from "@/components/common/UnexpectedErrorAlert";
+import { isUnexpectedError, isValidationError, getValidationFieldErrors } from "@/api/apiErrors";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +34,7 @@ export default function Register() {
   });
 
   const [errors, setErrors] = useState({ name: "", phone: "", general: "" });
+  const [unexpectedError, setUnexpectedError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   function validate() {
@@ -52,20 +56,27 @@ export default function Register() {
     return ok;
   }
 
+  const onChangeField = (field) => (e) => {
+    const value = e.target.value;
+    setForm((p) => ({ ...p, [field]: value }));
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
+  };
+
   async function onSubmit(e) {
     e.preventDefault();
+
+    setUnexpectedError(null);
+    setErrors({ name: "", phone: "", general: "" });
+
     if (!validate()) return;
 
     setSubmitting(true);
-    setErrors({ name: "", phone: "", general: "" });
-
     try {
       const data = await api.register({
         name: form.name.trim(),
         phone: form.phone.trim(),
       });
 
-      // ✅ new user => save => learn
       setUser({
         id: data?.id ?? data?.userId ?? data?.Id,
         name: data?.name ?? data?.Name ?? form.name.trim(),
@@ -73,38 +84,53 @@ export default function Register() {
       });
 
       navigate("/learn");
-    } catch (e2) {
-      const status = e2?.status;
-      const code = e2?.code;
+    } catch (err) {
+      const status = err?.status;
+      const code = err?.code;
 
-      // ✅ already exists => go login with message
+      // ✅ EXPECTED: already exists => redirect to login
       if (status === 409 && code === "PHONE_ALREADY_EXISTS") {
         navigate("/login", {
           replace: true,
           state: {
             phone: form.phone.trim(),
-            flash: {
-              message: "You already have an account. Redirecting to Log In…",
-            },
+            flash: { message: "You already have an account. Redirecting to Log In…" },
           },
         });
         return;
       }
 
+      // ✅ EXPECTED: validation => map field errors if present
+      if (isValidationError(err)) {
+        const fieldErrors = getValidationFieldErrors(err);
+        if (fieldErrors) {
+          setErrors((p) => ({
+            ...p,
+            name: fieldErrors?.name?.[0] ?? "",
+            phone: fieldErrors?.phone?.[0] ?? "",
+            general: "",
+          }));
+          return;
+        }
+        setErrors((p) => ({ ...p, general: "Please check your input and try again." }));
+        return;
+      }
+
+      // ❌ UNEXPECTED ONLY: network / 5xx
+      if (isUnexpectedError(err)) {
+        setUnexpectedError(err);
+        return;
+      }
+
+      // ✅ Other expected-ish errors
       setErrors((p) => ({
         ...p,
-        general: e2?.message || `Registration failed (HTTP ${status ?? "?"})`,
+        general: err?.message || `Registration failed (HTTP ${status ?? "?"})`,
       }));
     } finally {
       setSubmitting(false);
     }
   }
-
-  const onChangeField = (field) => (e) => {
-    const value = e.target.value;
-    setForm((p) => ({ ...p, [field]: value }));
-    if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -129,31 +155,29 @@ export default function Register() {
             <BookOpen className="w-8 h-8 text-white" />
           </motion.div>
 
-          <h1 className="text-2xl font-semibold text-slate-800 tracking-tight">
-            Learning Platform
-          </h1>
+          <h1 className="text-2xl font-semibold text-slate-800 tracking-tight">Learning Platform</h1>
           <p className="text-slate-500 mt-1">AI-powered personalized learning</p>
         </div>
 
         <Card className="border-0 shadow-xl shadow-slate-200/50 bg-white/80 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-xl font-semibold text-center">Sign Up</CardTitle>
-            <CardDescription className="text-center">
-              Enter your details to begin your learning journey
-            </CardDescription>
+            <CardDescription className="text-center">Enter your details to begin your learning journey</CardDescription>
           </CardHeader>
 
           <CardContent>
             {flash?.message && (
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                 <Alert className="mb-6 border-indigo-200 bg-indigo-50">
-                  <AlertDescription className="text-slate-700">
-                    {flash.message}
-                  </AlertDescription>
+                  <AlertDescription className="text-slate-700">{flash.message}</AlertDescription>
                 </Alert>
               </motion.div>
             )}
 
+            {/* ❌ only unexpected errors */}
+            <UnexpectedErrorAlert error={unexpectedError} />
+
+            {/* ✅ expected general errors only */}
             {errors.general && (
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                 <Alert variant="destructive" className="mb-6 border-red-200 bg-red-50">
@@ -165,9 +189,7 @@ export default function Register() {
 
             <form onSubmit={onSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-700 font-medium">
-                  Full Name
-                </Label>
+                <Label htmlFor="name" className="text-slate-700 font-medium">Full Name</Label>
                 <Input
                   id="name"
                   type="text"
@@ -187,9 +209,7 @@ export default function Register() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-slate-700 font-medium">
-                  Phone Number
-                </Label>
+                <Label htmlFor="phone" className="text-slate-700 font-medium">Phone Number</Label>
                 <Input
                   id="phone"
                   type="tel"

@@ -1,12 +1,11 @@
 import { endpoints } from "./endpoints";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-console.log("BASE_URL =", BASE_URL);
 
 function ensureBaseUrl() {
   if (!BASE_URL) {
     throw new Error(
-      "Missing VITE_API_BASE_URL. Create frontend/.env with VITE_API_BASE_URL=http://localhost:5000"
+      "Missing VITE_API_BASE_URL. Create frontend/.env with VITE_API_BASE_URL=http://localhost:8080"
     );
   }
 }
@@ -19,46 +18,64 @@ async function safeJson(res) {
   }
 }
 
-/**
- * Error object enriched with HTTP info for UI routing (409 -> login, 404 -> register, etc.)
- */
-function buildApiError(res, data) {
+function extractProblemFields(data) {
+  const ext = data?.extensions ?? {};
+  return {
+    detail: data?.detail,
+    code: data?.code ?? ext.code,
+    details: data?.details ?? ext.details,
+    traceId: data?.traceId ?? ext.traceId,
+  };
+}
+
+function buildApiErrorFromResponse(res, data) {
+  const p = extractProblemFields(data);
+
   const err = new Error(
-    data?.detail ||
+    p.detail ||
       data?.message ||
       data?.error ||
       `HTTP ${res.status}`
   );
 
-  // Attach useful fields for callers
   err.status = res.status;
-
-  // Our middleware returns ProblemDetails with extensions["code"]
-  // It may come as: { ... , extensions: { code: "X", details: ... } }
-  err.code = data?.code || data?.extensions?.code;
-  err.details = data?.details || data?.extensions?.details;
-
-  // Keep raw body in case you want to debug
+  err.code = p.code;
+  err.details = p.details;
+  err.traceId = p.traceId;
   err.data = data;
 
+  return err;
+}
+
+function buildNetworkError(e) {
+  const err = new Error("Network error. Please check your connection and try again.");
+  err.status = 0;
+  err.code = "NETWORK_ERROR";
+  err.details = null;
+  err.traceId = null;
+  err.cause = e;
   return err;
 }
 
 async function request(path, options = {}) {
   ensureBaseUrl();
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options,
+    });
+  } catch (e) {
+    throw buildNetworkError(e);
+  }
 
   const data = await safeJson(res);
 
   if (!res.ok) {
-    throw buildApiError(res, data);
+    throw buildApiErrorFromResponse(res, data);
   }
 
-  // some endpoints may return empty body
   return data ?? null;
 }
 

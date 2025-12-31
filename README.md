@@ -3,18 +3,18 @@ AI-Driven Learning Platform (Mini MVP)
 
 This repository contains a full-stack Mini MVP for an AI-driven learning platform.
 
-The system allows users to choose what they want to learn (by category and sub-category), submit learning prompts, receive AI-generated lessons, and review their personal learning history.
+Users can choose what they want to learn (by category & sub-category), submit prompts, receive AI-generated lessons, and review their personal learning history.
 
-The project was built to demonstrate software architecture skills, clean API design, frontend-backend integration, and delivery quality, with a strong emphasis on clarity, maintainability, and correctness.
+The project demonstrates clean architecture, production-grade API design, frontend-backend integration, and maintainable error handling with a consistent client experience.
 
 🎯 Product Capabilities
 User Flow
 
-Register as a new user (Sign-Up)
+Sign up (register)
 
-Log in as an existing user (Log-In)
+Log in
 
-Select learning categories and sub-categories
+Select category & sub-category
 
 Submit a learning prompt
 
@@ -29,9 +29,6 @@ View all registered users
 View prompt history per user (admin dashboard)
 
 🧱 Architecture Overview
-
-The system is built with clearly separated layers and follows production-grade design principles.
-
 Backend
 
 Framework: ASP.NET Core Web API
@@ -44,9 +41,9 @@ Architecture: Controllers → Services → Data
 
 Validation: DTO validation → domain exceptions
 
-Error Handling: Global exception middleware
+Error Handling: Global exception middleware (ProblemDetails)
 
-API Documentation: Swagger / OpenAPI
+API Docs: Swagger / OpenAPI
 
 Containerization: Docker & Docker Compose
 
@@ -56,19 +53,19 @@ Framework: React (Vite)
 
 Routing: React Router
 
-State Management: Local component state + localStorage
+State: Local component state + localStorage
 
-API Communication: Fetch-based REST abstraction
+API Communication: Centralized fetch wrapper (apiClient)
 
 Route Protection: Guarded routes for authenticated users
 
-UI: Simple, functional dashboard (focus on behavior, not styling)
+Error UX: Consistent “expected vs unexpected” strategy
+
+UI: Functional dashboard with clean component structure
 
 🔧 Backend Features
 
-User registration (Sign-Up)
-
-User login (Log-In)
+User registration + login
 
 Category & sub-category retrieval (auto-seeded)
 
@@ -76,7 +73,7 @@ Prompt submission with stored AI responses
 
 User-scoped learning history
 
-Admin endpoints for user & prompt inspection
+Admin endpoints for system inspection
 
 Strict DTO-based API (no entity exposure)
 
@@ -88,35 +85,41 @@ Environment-based configuration (Local / Docker)
 
 Dedicated Sign-Up and Log-In pages
 
-Automatic navigation based on backend responses
+Automatic navigation based on backend responses (expected flows)
 
 Protected learning dashboard
 
-Category & sub-category selection flow
+Category/sub-category selection
 
 Prompt submission and AI response rendering
 
 Learning history view per user
 
-Admin dashboard for system-wide inspection
+Centralized API client for consistent responses/errors
 
-Clean component structure with controlled side-effects
+Consistent error UX:
 
-Frontend Dockerization was intentionally deferred to keep the MVP focused.
+expected errors handled per screen
 
-🧠 Error Handling Strategy
+unexpected errors shown via one shared component
 
-The backend uses a single, unified error-handling mechanism based on domain exceptions and a global middleware.
+🧠 Error Handling Strategy (Updated)
+Backend: Unified ProblemDetails
 
-All errors are returned in a frontend-friendly ProblemDetails format:
+All backend errors are returned in a frontend-friendly ProblemDetails shape:
 
 {
   "title": "Bad Request",
   "status": 400,
   "detail": "Validation failed",
-  "instance": "/api/prompts",
+  "instance": "/api/Prompts",
   "extensions": {
     "code": "VALIDATION_ERROR",
+    "details": {
+      "errors": {
+        "phone": ["Phone must be a valid Israeli number (05XXXXXXXX)"]
+      }
+    },
     "traceId": "00-acde..."
   }
 }
@@ -133,7 +136,31 @@ Data conflicts → 409 Conflict
 
 Unhandled errors → 500 Internal Server Error
 
-🗂️ Project Structure
+Frontend: Expected vs Unexpected (Production-grade UX)
+
+The frontend distinguishes between:
+
+✅ Expected errors (handled explicitly per flow)
+
+409 PHONE_ALREADY_EXISTS → redirect to Log-In with friendly message
+
+404 USER_NOT_FOUND → redirect to Sign-Up with friendly message
+
+400 VALIDATION_ERROR → show field-level errors / input messages
+
+❌ Unexpected errors (generic UI, consistent everywhere)
+
+Network errors (fetch failure) → status = 0
+
+Server errors (5xx) → status >= 500
+
+Unexpected errors are displayed via a single shared component:
+
+UnexpectedErrorAlert.jsx
+
+includes a generic message (“Please try again later”) + optional traceId
+
+🗂️ Project Structure (Updated)
 ai-learning-platform/
 ├── backend/
 │   └── LearningPlatform.Api/
@@ -151,12 +178,17 @@ ai-learning-platform/
 ├── frontend/
 │   └── src/
 │       ├── pages/
-│       │   ├── SignUp.jsx
+│       │   ├── Register.jsx
 │       │   ├── Login.jsx
 │       │   ├── Learn.jsx
 │       │   └── Admin.jsx
 │       ├── components/
+│       │   └── common/
+│       │       └── UnexpectedErrorAlert.jsx
 │       ├── api/
+│       │   ├── apiClient.js
+│       │   ├── endpoints.js
+│       │   └── apiErrors.js
 │       ├── utils/
 │       └── App.jsx
 ├── docker-compose.yml
@@ -242,7 +274,7 @@ Frontend Dockerization
 
 UI/UX refinement
 
-Deployment to cloud environment
+Cloud deployment
 
 👩‍💻 Author
 

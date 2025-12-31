@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Navigate } from "react-router-dom";
+import { api } from "../api/apiClient";
+
+import UnexpectedErrorAlert from "@/components/common/UnexpectedErrorAlert";
+import { isUnexpectedError } from "@/api/apiErrors";
 
 import TopNav from "../components/learning/TopNav";
 import CategorySelector from "../components/learning/CategorySelector";
@@ -6,52 +11,53 @@ import PromptForm from "../components/learning/PromptForm";
 import ResponsePanel from "../components/learning/ResponsePanel";
 import HistoryList from "../components/learning/HistoryList";
 import HistoryDetailsModal from "../components/learning/HistoryDetailsModal";
-import { Navigate } from "react-router-dom";
-
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function Learn() {
-  
   const userId = localStorage.getItem("userId");
   if (!userId) return <Navigate to="/login" replace />;
+
+  // ❌ only for unexpected
+  const [unexpectedError, setUnexpectedError] = useState(null);
 
   // Categories
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState("");
+  const [categoriesError, setCategoriesError] = useState(""); // expected only
 
-  // ✅ Controlled select values from first render (no uncontrolled->controlled)
+  // Controlled select values
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState("");
 
   // Prompt/response
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [submitError, setSubmitError] = useState(""); // expected only
   const [lastResponse, setLastResponse] = useState(null);
 
   // History
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState("");
+  const [historyError, setHistoryError] = useState(""); // expected only
 
   // Modal
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch categories
+  // Fetch categories (via apiClient for consistent errors)
   useEffect(() => {
     const fetchCategories = async () => {
       setCategoriesLoading(true);
       setCategoriesError("");
+      setUnexpectedError(null);
 
       try {
-        const res = await fetch(`${API_BASE_URL}/api/categories`);
-        if (!res.ok) throw new Error(`Failed to load categories (${res.status})`);
-        const data = await res.json();
+        const data = await api.getCategories();
         setCategories(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setCategoriesError(e?.message || "Failed to load categories");
+      } catch (err) {
+        if (isUnexpectedError(err)) {
+          setUnexpectedError(err);
+          return;
+        }
+        setCategoriesError(err?.message || "Failed to load categories");
       } finally {
         setCategoriesLoading(false);
       }
@@ -64,16 +70,17 @@ export default function Learn() {
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     setHistoryError("");
+    setUnexpectedError(null);
 
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/Prompts/history?userId=${encodeURIComponent(userId)}`
-      );
-      if (!res.ok) throw new Error(`Failed to load history (${res.status})`);
-      const data = await res.json();
+      const data = await api.getHistory(userId);
       setHistory(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setHistoryError(e?.message || "Failed to load history");
+    } catch (err) {
+      if (isUnexpectedError(err)) {
+        setUnexpectedError(err);
+        return;
+      }
+      setHistoryError(err?.message || "Failed to load history");
     } finally {
       setHistoryLoading(false);
     }
@@ -83,7 +90,6 @@ export default function Learn() {
     fetchHistory();
   }, [fetchHistory]);
 
-  // ✅ Wrap setters so values stay strings and subcategory resets on category change
   const handleCategoryChange = (categoryId) => {
     const next = categoryId ? String(categoryId) : "";
     setSelectedCategoryId(next);
@@ -97,39 +103,29 @@ export default function Learn() {
     setSubmitError("");
   };
 
-  // Submit prompt
   const handlePromptSubmit = async (prompt) => {
     setSubmitError("");
+    setUnexpectedError(null);
 
     if (!selectedCategoryId || !selectedSubCategoryId) return;
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/Prompts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: Number(userId),
-          categoryId: Number(selectedCategoryId),
-          subCategoryId: Number(selectedSubCategoryId),
-          prompt,
-        }),
+      const data = await api.createPrompt({
+        userId: Number(userId),
+        categoryId: Number(selectedCategoryId),
+        subCategoryId: Number(selectedSubCategoryId),
+        prompt,
       });
 
-      // ✅ Better error visibility (500s often aren't JSON)
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `Server error (${res.status})`);
-      }
-
-      const data = await res.json();
       setLastResponse(data);
-
-      // refresh history after success
       await fetchHistory();
-    } catch (e) {
-      setSubmitError(e?.message || "Failed to generate lesson");
-      console.error("POST /api/Prompts failed:", e);
+    } catch (err) {
+      if (isUnexpectedError(err)) {
+        setUnexpectedError(err);
+        return;
+      }
+      setSubmitError(err?.message || "Failed to generate lesson");
     } finally {
       setIsSubmitting(false);
     }
@@ -139,6 +135,11 @@ export default function Learn() {
     <div className="min-h-screen">
       <TopNav />
 
+      {/* ❌ only unexpected errors */}
+      <div className="max-w-7xl mx-auto px-6 pt-6">
+        <UnexpectedErrorAlert error={unexpectedError} />
+      </div>
+
       <main className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <CategorySelector
           categories={categories}
@@ -147,7 +148,7 @@ export default function Learn() {
           onCategoryChange={handleCategoryChange}
           onSubCategoryChange={handleSubCategoryChange}
           isLoading={categoriesLoading}
-          error={categoriesError}
+          error={categoriesError} // expected only
         />
 
         <PromptForm
@@ -161,7 +162,7 @@ export default function Learn() {
               ? "Please select a sub-category"
               : ""
           }
-          error={submitError}
+          error={submitError} // expected only
         />
 
         <ResponsePanel response={lastResponse} />
@@ -169,7 +170,7 @@ export default function Learn() {
         <HistoryList
           history={history}
           isLoading={historyLoading}
-          error={historyError}
+          error={historyError} // expected only
           onRefresh={fetchHistory}
           onViewItem={(item) => {
             setSelectedHistoryItem(item);
@@ -189,3 +190,5 @@ export default function Learn() {
     </div>
   );
 }
+
+
