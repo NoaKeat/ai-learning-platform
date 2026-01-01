@@ -77,10 +77,15 @@ export default function Register() {
         phone: form.phone.trim(),
       });
 
+      const user = data?.user;
+      const token = data?.token;
+
+      if (token) localStorage.setItem("token", token);
+
       setUser({
-        id: data?.id ?? data?.userId ?? data?.Id,
-        name: data?.name ?? data?.Name ?? form.name.trim(),
-        phone: data?.phone ?? data?.Phone ?? form.phone.trim(),
+        id: user?.id ?? user?.userId ?? user?.Id,
+        name: user?.name ?? user?.Name ?? form.name.trim(),
+        phone: user?.phone ?? user?.Phone ?? form.phone.trim(),
       });
 
       navigate("/learn");
@@ -88,7 +93,6 @@ export default function Register() {
       const status = err?.status;
       const code = err?.code;
 
-      // ✅ EXPECTED: already exists => redirect to login
       if (status === 409 && code === "PHONE_ALREADY_EXISTS") {
         navigate("/login", {
           replace: true,
@@ -100,7 +104,6 @@ export default function Register() {
         return;
       }
 
-      // ✅ EXPECTED: validation => map field errors if present
       if (isValidationError(err)) {
         const fieldErrors = getValidationFieldErrors(err);
         if (fieldErrors) {
@@ -116,13 +119,11 @@ export default function Register() {
         return;
       }
 
-      // ❌ UNEXPECTED ONLY: network / 5xx
       if (isUnexpectedError(err)) {
         setUnexpectedError(err);
         return;
       }
 
-      // ✅ Other expected-ish errors
       setErrors((p) => ({
         ...p,
         general: err?.message || `Registration failed (HTTP ${status ?? "?"})`,
@@ -131,6 +132,10 @@ export default function Register() {
       setSubmitting(false);
     }
   }
+
+  const nameErrorId = "name-error";
+  const phoneErrorId = "phone-error";
+  const generalErrorId = "register-general-error";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -174,55 +179,78 @@ export default function Register() {
               </motion.div>
             )}
 
-            {/* ❌ only unexpected errors */}
             <UnexpectedErrorAlert error={unexpectedError} />
 
-            {/* ✅ expected general errors only */}
             {errors.general && (
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-                <Alert variant="destructive" className="mb-6 border-red-200 bg-red-50">
+                <Alert variant="destructive" className="mb-6 border-red-200 bg-red-50" aria-live="polite">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{errors.general}</AlertDescription>
+                  <AlertDescription id={generalErrorId}>{errors.general}</AlertDescription>
                 </Alert>
               </motion.div>
             )}
 
-            <form onSubmit={onSubmit} className="space-y-5">
+            <form onSubmit={onSubmit} className="space-y-5" noValidate>
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-700 font-medium">Full Name</Label>
+                <Label htmlFor="name" className="text-slate-700 font-medium">
+                  Full Name
+                </Label>
                 <Input
                   id="name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   placeholder="Enter your name"
                   value={form.name}
                   onChange={onChangeField("name")}
                   disabled={submitting}
+                  aria-invalid={Boolean(errors.name)}
+                  aria-describedby={errors.name ? nameErrorId : undefined}
                   className={`h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors ${
                     errors.name ? "border-red-300 focus:ring-red-200" : "focus:ring-indigo-200"
                   }`}
                 />
                 {errors.name && (
-                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-red-500 mt-1">
+                  <motion.p
+                    id={nameErrorId}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-red-500 mt-1"
+                    aria-live="polite"
+                  >
                     {errors.name}
                   </motion.p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-slate-700 font-medium">Phone Number</Label>
+                <Label htmlFor="phone" className="text-slate-700 font-medium">
+                  Phone Number
+                </Label>
                 <Input
                   id="phone"
+                  name="phone"
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   placeholder="05XXXXXXXX"
                   value={form.phone}
                   onChange={onChangeField("phone")}
                   disabled={submitting}
+                  aria-invalid={Boolean(errors.phone)}
+                  aria-describedby={errors.phone ? phoneErrorId : undefined}
                   className={`h-12 bg-slate-50 border-slate-200 focus:bg-white transition-colors ${
                     errors.phone ? "border-red-300 focus:ring-red-200" : "focus:ring-indigo-200"
                   }`}
                 />
                 {errors.phone && (
-                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-red-500 mt-1">
+                  <motion.p
+                    id={phoneErrorId}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-red-500 mt-1"
+                    aria-live="polite"
+                  >
                     {errors.phone}
                   </motion.p>
                 )}

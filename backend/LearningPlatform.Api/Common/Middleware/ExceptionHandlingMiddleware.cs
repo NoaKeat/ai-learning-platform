@@ -28,16 +28,10 @@ public class ExceptionHandlingMiddleware
         catch (Exception ex)
         {
             if (ctx.Response.HasStarted)
-                throw;
+                throw;           
+           
 
-            // 400 - ולידציה/טיעונים לא תקינים
-            if (ex is ArgumentException argEx)
-            {
-                await WriteProblem(ctx, HttpStatusCode.BadRequest, "ARGUMENT_ERROR", argEx.Message, null);
-                return;
-            }
-
-            // 409 - התנגשות/Constraint DB
+            
             if (ex is DbUpdateException)
             {
                 await WriteProblem(ctx, HttpStatusCode.Conflict, "DB_CONFLICT",
@@ -45,14 +39,14 @@ public class ExceptionHandlingMiddleware
                 return;
             }
 
-            // ApiException -> סטטוס לפי מה שהגדרת
+            
             if (ex is ApiException apiEx)
             {
                 await WriteProblem(ctx, apiEx.StatusCode, apiEx.Code, apiEx.Message, apiEx.Details);
                 return;
             }
 
-            // 500 - לא צפוי
+           
             var devDetails = _env.IsDevelopment()
                 ? new { exception = ex.GetType().Name, message = ex.Message }
                 : null;

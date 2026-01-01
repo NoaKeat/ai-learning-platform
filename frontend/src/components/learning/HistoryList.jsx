@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,19 @@ export default function HistoryList({
   onRefresh,
   onViewItem,
 }) {
+  const didAutoLoadRef = useRef(false);
+
+  // ✅ AUTO LOAD פעם אחת בכניסה למסך
+  useEffect(() => {
+    if (didAutoLoadRef.current) return;
+    didAutoLoadRef.current = true;
+
+    // אל תרוץ אם אין callback
+    if (typeof onRefresh === "function") {
+      onRefresh();
+    }
+  }, [onRefresh]);
+
   const sortedHistory = useMemo(() => {
     return [...(history || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [history]);
@@ -76,7 +89,7 @@ export default function HistoryList({
               <AnimatePresence>
                 {sortedHistory.map((item, index) => (
                   <motion.div
-                    key={item.id}
+                    key={item.id ?? `${item.createdAt}-${index}`}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}

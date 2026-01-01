@@ -1,39 +1,92 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.EntityFrameworkCore;
-using LearningPlatform.Api.Data;
-using Microsoft.AspNetCore.Mvc;
-using LearningPlatform.Api.Services;
+using System.Text;
 using LearningPlatform.Api.Common.Filters;
 using LearningPlatform.Api.Common.Middleware;
+using LearningPlatform.Api.Data;
+using LearningPlatform.Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ CORS — מאפשר ל-React (5173) לגשת ל-API (8080)
+// ✅ Fail fast for JWT config (מוקדם!)
+var jwt = builder.Configuration.GetSection("Jwt");
+var rawJwtKey = jwt["Key"];
+
+if (string.IsNullOrWhiteSpace(rawJwtKey) || Encoding.UTF8.GetByteCount(rawJwtKey) < 16)
+{
+    throw new InvalidOperationException(
+        "JWT configuration error: Jwt:Key is missing or too short (min 16 bytes)."
+    );
+}
+
+var signingKeyBytes = Encoding.UTF8.GetBytes(rawJwtKey);
+
+// ✅ Auth
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = jwt["Issuer"],
+            ValidAudience = jwt["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(signingKeyBytes),
+
+            // אפשר 0 או 2 דקות; 2 דקות עוזר במכונות שונות
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
+
+        // ✅ Debug + Fix: לנקות Authorization header לפני parsing
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = ctx =>
+            {
+                Console.WriteLine("JWT AUTH FAILED: " + ctx.Exception.GetType().Name);
+                Console.WriteLine(ctx.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = ctx =>
+            {
+                Console.WriteLine("JWT OK (token validated).");
+                return Task.CompletedTask;
+            }
+        };
+
+    });
+
+builder.Services.AddAuthorization();
+
+// ✅ CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
         policy.WithOrigins(
-                "http://localhost:3000", // ✅ Docker+nginx
-                "http://localhost:5173"  // ✅ Vite dev (אם תריצי בלי Docker)
+                "http://localhost:3000",
+                "http://localhost:5173"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
     );
 });
 
-
+// ✅ DI
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IPromptService, PromptService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAiService, OpenAiService>();
 
-builder.Services.AddScoped<IAdminService, AdminService>();
-
-// Controllers
+// ✅ Controllers + validation filter
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationExceptionFilter>();
@@ -44,15 +97,45 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.SuppressModelStateInvalidFilter = true;
 });
 
-// Swagger/OpenAPI
+// ✅ Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new()
+    {
+        Title = "LearningPlatform.Api",
+        Version = "v1"
+    });
 
-/*
-   DB Connection logic:
-   1) Prefer appsettings ConnectionStrings:DefaultConnection (local dev)
-   2) Otherwise build connection from ENV vars (docker-compose)
-*/
+    // 🔐 JWT Bearer definition (Swagger יוסיף Bearer לבד!)
+    options.AddSecurityDefinition("Bearer", new()
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Paste ONLY the JWT token here (without the word 'Bearer')."
+    });
+
+    // 🔐 Apply JWT globally
+    options.AddSecurityRequirement(new()
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// ✅ DB connection (כמו אצלך)
 var connFromConfig = builder.Configuration.GetConnectionString("DefaultConnection");
 
 var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
@@ -91,13 +174,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// ✅ 1) Middleware לחריגות (כמו אצלך)
+// ✅ Exceptions first
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// ✅ 2) CORS חייב להיות מוקדם, לפני MapControllers (ולפני Authorization)
+// ✅ Swagger (dev)
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+// ✅ CORS early
 app.UseCors("Frontend");
 
-// ✅ 3) Auto migrate + seed on startup
+// ✅ DB migrate/seed
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -122,14 +212,14 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
+// אם בדוקר עושה בעיות רידיירקט — אפשר להסיר
 app.UseHttpsRedirection();
+
+// ✅ Auth
+app.UseAuthentication();
 app.UseAuthorization();
 
+// ✅ Controllers
 app.MapControllers();
+
 app.Run();

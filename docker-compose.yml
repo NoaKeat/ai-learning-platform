@@ -13,7 +13,7 @@ services:
     volumes:
       - learning_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD} --silent" ]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -32,7 +32,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
 
-      # DB
+      Jwt__Key: ${JWT__KEY}
+      Jwt__Issuer: ${JWT__ISSUER}
+      Jwt__Audience: ${JWT__AUDIENCE}
+
       DB_HOST: mysql
       DB_PORT: 3306
       DB_NAME: ${MYSQL_DATABASE}

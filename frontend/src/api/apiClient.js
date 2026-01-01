@@ -1,7 +1,9 @@
 import { endpoints } from "./endpoints";
+import { clearUser, getToken } from "../utils/storage";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+/* -------------------- Helpers -------------------- */
 function ensureBaseUrl() {
   if (!BASE_URL) {
     throw new Error(
@@ -21,6 +23,7 @@ async function safeJson(res) {
 function extractProblemFields(data) {
   const ext = data?.extensions ?? {};
   return {
+    title: data?.title,
     detail: data?.detail,
     code: data?.code ?? ext.code,
     details: data?.details ?? ext.details,
@@ -31,19 +34,20 @@ function extractProblemFields(data) {
 function buildApiErrorFromResponse(res, data) {
   const p = extractProblemFields(data);
 
-  const err = new Error(
+  const message =
     p.detail ||
-      data?.message ||
-      data?.error ||
-      `HTTP ${res.status}`
-  );
+    data?.message ||
+    data?.error ||
+    p.title ||
+    `HTTP ${res.status}`;
 
+  const err = new Error(message);
   err.status = res.status;
-  err.code = p.code;
-  err.details = p.details;
-  err.traceId = p.traceId;
-  err.data = data;
-
+  err.code = p.code || "API_ERROR";
+  err.details = p.details ?? null;
+  err.traceId = p.traceId ?? null;
+  err.data = data ?? null;
+  err.isApiError = true;
   return err;
 }
 
@@ -54,31 +58,59 @@ function buildNetworkError(e) {
   err.details = null;
   err.traceId = null;
   err.cause = e;
+  err.isNetworkError = true;
   return err;
 }
 
+function isSuccessStatus(status) {
+  return (status >= 200 && status < 300) || status === 304;
+}
+
+// ✅ helper: endpoints שלא צריכים Authorization בכלל
+function isPublicEndpoint(path) {
+  return path === endpoints.login || path === endpoints.register;
+}
+
+/* -------------------- Core request -------------------- */
 async function request(path, options = {}) {
   ensureBaseUrl();
+
+  const token = getToken ? getToken() : localStorage.getItem("token");
+  const attachAuth = Boolean(token) && !isPublicEndpoint(path);
 
   let res;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
       ...options,
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        ...(attachAuth ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
     });
   } catch (e) {
     throw buildNetworkError(e);
   }
 
-  const data = await safeJson(res);
+  const data = res.status === 304 ? null : await safeJson(res);
 
-  if (!res.ok) {
+  // ✅ אם JWT לא תקין/פג תוקף — מנקים הכל כדי שה־UI יתעדכן
+  if (res.status === 401) {
+    // clearUser מוחק גם token וגם userId/userName/phone ומרים auth-changed
+    if (typeof clearUser === "function") clearUser();
+    else localStorage.removeItem("token");
+  }
+
+  if (!isSuccessStatus(res.status)) {
     throw buildApiErrorFromResponse(res, data);
   }
 
   return data ?? null;
 }
 
+/* -------------------- Public API -------------------- */
 export const api = {
   // Users
   register: (payload) =>
@@ -93,6 +125,11 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  me: () =>
+    request(endpoints.me, {
+      method: "GET",
+    }),
+
   // Categories
   getCategories: () => request(endpoints.categories),
 
@@ -103,5 +140,6 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  getHistory: (userId) => request(endpoints.history(userId)),
+  myHistory: (userId) =>
+    request(`/api/prompts/history?userId=${encodeURIComponent(userId)}`),
 };

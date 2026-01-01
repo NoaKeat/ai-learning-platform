@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+// Learn.jsx (מתוקן) — להדבקה מלאה
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { api } from "../api/apiClient";
 
@@ -12,7 +13,12 @@ import ResponsePanel from "../components/learning/ResponsePanel";
 import HistoryList from "../components/learning/HistoryList";
 import HistoryDetailsModal from "../components/learning/HistoryDetailsModal";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -47,8 +53,7 @@ export default function Learn() {
     Number(localStorage.getItem("adminLockedUntil") || 0)
   );
 
-  const isAdminLocked = () =>
-    adminLockedUntil && Date.now() < adminLockedUntil;
+  const isAdminLocked = () => adminLockedUntil && Date.now() < adminLockedUntil;
 
   /* auto hide admin alert */
   useEffect(() => {
@@ -76,10 +81,15 @@ export default function Learn() {
     const fetchCategories = async () => {
       setCategoriesLoading(true);
       setCategoriesError("");
-      setUnexpectedError(null);
+      // אל תנקה unexpected כאן בהתחלה כדי לא "להעלים" הודעה אמיתית בזמן טעינה
       try {
         const data = await api.getCategories();
+
         setCategories(Array.isArray(data) ? data : []);
+        setCategoriesError("");
+
+        // ✅ FIX #1: אם הצליח – לנקות unexpectedError כדי שהבאנר לא ייתקע למעלה
+        setUnexpectedError(null);
       } catch (err) {
         if (isUnexpectedError(err)) return setUnexpectedError(err);
         setCategoriesError("Failed to load categories");
@@ -87,6 +97,7 @@ export default function Learn() {
         setCategoriesLoading(false);
       }
     };
+
     fetchCategories();
   }, []);
 
@@ -96,27 +107,6 @@ export default function Learn() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [lastResponse, setLastResponse] = useState(null);
-
-  const handlePromptSubmit = async (prompt) => {
-    setSubmitError("");
-    setUnexpectedError(null);
-    setIsSubmitting(true);
-    try {
-      const data = await api.createPrompt({
-        userId: Number(userId),
-        categoryId: Number(selectedCategoryId),
-        subCategoryId: Number(selectedSubCategoryId),
-        prompt,
-      });
-      setLastResponse(data);
-      await fetchHistory();
-    } catch (err) {
-      if (isUnexpectedError(err)) return setUnexpectedError(err);
-      setSubmitError("Failed to generate lesson");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   /* ---------- History ---------- */
   const [history, setHistory] = useState([]);
@@ -128,19 +118,59 @@ export default function Learn() {
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     setHistoryError("");
+
     try {
-      const data = await api.getHistory(userId);
+      const data = await api.myHistory(Number(userId)); // ✅ נכון לפי השרת
       setHistory(Array.isArray(data) ? data : []);
-    } catch {
-      setHistoryError("Failed to load history");
+      setUnexpectedError(null);
+    } catch (err) {
+      if (isUnexpectedError(err)) return setUnexpectedError(err);
+      setHistoryError(err?.message || "Failed to load history");
     } finally {
       setHistoryLoading(false);
     }
   }, [userId]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+
+
+  const handlePromptSubmit = async (prompt) => {
+    setSubmitError("");
+    setIsSubmitting(true);
+
+    try {
+      const data = await api.createPrompt({
+        userId: Number(userId),
+        categoryId: Number(selectedCategoryId),
+        subCategoryId: Number(selectedSubCategoryId),
+        prompt,
+      });
+
+      // 1️⃣ הצגת התשובה
+      setLastResponse(data);
+
+      // 2️⃣ הוספה מיידית להיסטוריה (optimistic update)
+      setHistory((prev) => [
+        {
+          id: data.id ?? crypto.randomUUID(),
+          prompt: data.prompt ?? prompt,
+          response: data.response ?? data.aiResponse ?? "",
+          createdAt: new Date().toISOString(),
+          categoryName: data.categoryName ?? "",
+          subCategoryName: data.subCategoryName ?? "",
+        },
+        ...prev,
+      ]);
+
+      // 3️⃣ סנכרון מהשרת (לא חובה ל-UX אבל טוב לדיוק)
+      fetchHistory();
+    } catch (err) {
+      if (isUnexpectedError(err)) setUnexpectedError(err);
+      else setSubmitError("Failed to generate lesson");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   /* ---------- Admin Verify + Lock ---------- */
   const verifyAdminKey = async () => {
@@ -156,7 +186,10 @@ export default function Learn() {
 
     try {
       const key = adminKeyInput.trim();
-      if (!key) throw new Error();
+      if (!key) {
+        setAdminDeniedMessage("Please enter admin password.");
+        return;
+      }
 
       const res = await fetch(
         `${API_BASE_URL}/api/admin/users?page=1&pageSize=1`,
@@ -169,9 +202,44 @@ export default function Learn() {
         }
       );
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          const next = adminAttempts + 1;
+          setAdminAttempts(next);
+          localStorage.setItem("adminAttempts", String(next));
 
-      // success
+          if (next >= MAX_ADMIN_ATTEMPTS) {
+            const lockUntil = Date.now() + ADMIN_LOCK_MINUTES * 60 * 1000;
+            setAdminLockedUntil(lockUntil);
+            localStorage.setItem("adminLockedUntil", String(lockUntil));
+            setAdminDeniedMessage(
+              "Too many failed attempts. Access is temporarily locked."
+            );
+          } else {
+            setAdminDeniedMessage("Invalid admin password.");
+          }
+
+          setAdminModalOpen(false);
+          return;
+        }
+
+        if (res.status === 409) {
+          setAdminDeniedMessage(
+            "Server configuration error (admin key is not configured)."
+          );
+          setAdminModalOpen(false);
+          return;
+        }
+
+        const err = new Error(`Admin verification failed (HTTP ${res.status})`);
+        err.status = res.status;
+        setUnexpectedError(err);
+        setAdminDeniedMessage("Something went wrong. Please try again.");
+        setAdminModalOpen(false);
+        return;
+      }
+
+      // ✅ SUCCESS
       localStorage.removeItem("adminAttempts");
       localStorage.removeItem("adminLockedUntil");
       setAdminAttempts(0);
@@ -180,24 +248,15 @@ export default function Learn() {
       localStorage.setItem("adminKey", key);
       window.dispatchEvent(new Event("auth-changed"));
       setAdminModalOpen(false);
+
+      // ✅ ניקוי כללי
+      setUnexpectedError(null);
+      setAdminDeniedMessage("");
+
       navigate("/admin");
-
-    } catch {
-      const next = adminAttempts + 1;
-      setAdminAttempts(next);
-      localStorage.setItem("adminAttempts", next);
-
-      if (next >= MAX_ADMIN_ATTEMPTS) {
-        const lockUntil =
-          Date.now() + ADMIN_LOCK_MINUTES * 60 * 1000;
-        setAdminLockedUntil(lockUntil);
-        localStorage.setItem("adminLockedUntil", lockUntil);
-        setAdminDeniedMessage(
-          "Too many failed attempts. Access is temporarily locked."
-        );
-      } else {
-        setAdminDeniedMessage("Invalid admin password.");
-      }
+    } catch (err) {
+      setUnexpectedError(err instanceof Error ? err : new Error("Unknown error"));
+      setAdminDeniedMessage("Network/server error. Please try again.");
       setAdminModalOpen(false);
     } finally {
       setAdminAuthLoading(false);
@@ -241,6 +300,13 @@ export default function Learn() {
           isSubmitting={isSubmitting}
           isDisabled={!selectedCategoryId || !selectedSubCategoryId}
           error={submitError}
+          disabledReason={
+            !selectedCategoryId
+              ? "Select a category first"
+              : !selectedSubCategoryId
+                ? "Select a sub-category first"
+                : ""
+          }
         />
 
         <ResponsePanel response={lastResponse} />
@@ -281,11 +347,7 @@ export default function Learn() {
             onKeyDown={(e) => e.key === "Enter" && verifyAdminKey()}
           />
 
-          <Button
-            onClick={verifyAdminKey}
-            disabled={adminAuthLoading}
-            className="w-full"
-          >
+          <Button onClick={verifyAdminKey} disabled={adminAuthLoading} className="w-full">
             {adminAuthLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

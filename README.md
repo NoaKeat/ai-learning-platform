@@ -1,157 +1,248 @@
-# AI-Driven Learning Platform (Mini MVP)
+AI-Driven Learning Platform (Mini MVP)
+📌 Overview
 
-## 📌 Overview
-This repository contains a full-stack **Mini MVP** for an AI-driven learning platform.
+This repository contains a production-grade Mini MVP for an AI-driven learning platform.
 
-The platform allows users to select what they want to learn (by category and sub-category),
-submit learning prompts, receive AI-generated lessons, and review their personal learning history.
+Users choose a learning topic (category + sub-category), submit a prompt, receive an AI-generated lesson, and review their personal learning history.
+An Admin panel enables secure inspection of registered users and their learning activity.
 
-The project focuses on **clean architecture**, **production-grade API design**,
-clear frontend-backend separation, and **maintainable error handling** with a consistent user experience.
+The focus is clean architecture, explicit boundaries, defensive backend design, and real-world auth patterns.
 
----
+✅ Functional Scope
+User Capabilities
 
-## 🎯 Product Capabilities
+Register and log in
 
-### User Flow
-- Sign up (register)
-- Log in
-- Select category & sub-category
-- Submit a learning prompt
-- Receive an AI-generated lesson
-- View personal learning history
+Receive a signed JWT on authentication
 
-### Admin Flow
-- Secure access to admin dashboard
-- View all registered users
-- View prompt history per user
-- Server-side paginated user listing
+Select category and sub-category
 
----
+Submit a learning prompt
 
-## 🧱 Architecture Overview
+Receive an AI-generated lesson
 
-### Backend
-- **Framework:** ASP.NET Core Web API
-- **Database:** MySQL
-- **ORM:** Entity Framework Core
-- **Architecture:** Controllers → Services → Data
-- **Validation:** DTO validation → domain exceptions
-- **Error Handling:** Global exception middleware using ProblemDetails
-- **API Docs:** Swagger / OpenAPI
-- **Containerization:** Docker & Docker Compose
+View personal learning history
 
-### Frontend
-- **Framework:** React (Vite)
-- **Routing:** React Router
-- **State Management:** Local component state + localStorage
-- **API Communication:** Centralized API client
-- **Route Protection:** Guarded routes for authenticated users
-- **UI:** Clean, functional learning and admin dashboards
+Admin Capabilities
 
----
+Secure access to admin endpoints (server-side enforced)
 
-## 🔧 Backend Features
-- User registration and login
-- Category & sub-category retrieval (auto-seeded)
-- Prompt submission with stored AI responses
-- User-scoped learning history
-- Admin endpoints with server-side pagination
-- Strict DTO-based API (no entity exposure)
-- Unified error handling using ProblemDetails
+View all registered users (server-side pagination)
 
----
+View learning history per user
 
-## 🎨 Frontend Features
-- Dedicated Sign-Up and Log-In pages
-- Protected learning dashboard
-- Category & sub-category selection
-- Prompt submission and AI response rendering
-- Learning history per user
-- Admin dashboard with classic pagination
-- Centralized error handling strategy
+🧱 System Architecture
+Backend
 
----
+Framework: ASP.NET Core Web API
 
-## 📄 Admin Pagination Strategy
-The admin dashboard uses **server-side pagination** with a fixed page size.
+Database: MySQL
 
-- Each page displays **10 users**
-- Navigation uses **classic page controls (Previous / Next)**
-- Backend endpoints support `page` and `pageSize`
-- This approach ensures predictable tables and production-grade admin workflows
+ORM: Entity Framework Core
 
----
+Architecture: Controllers → Services → Data
 
-## 🧠 Error Handling Strategy
+Validation: DTO validation mapped to domain exceptions
 
-### Backend (ProblemDetails)
-All backend errors are returned in a consistent ProblemDetails format.
+Error Handling: Global exception middleware returning consistent ProblemDetails
 
-- Validation errors → 400
-- Business rule violations → 400
-- Resource not found → 404
-- Data conflicts → 409
-- Unhandled errors → 500
+Authentication: JWT Bearer
 
----
+Admin Protection: Server-side Admin key filter (X-ADMIN-KEY)
 
-## 🗂️ Project Structure
+API Docs: Swagger / OpenAPI
+
+Containerization: Docker + Docker Compose
+
+Frontend
+
+Framework: React (Vite)
+
+Routing: React Router
+
+State: Local component state + localStorage
+
+API: Centralized API client with unified error handling
+
+UI: Learning dashboard + Admin panel
+
+🔐 Security Design
+JWT Authentication (Implemented)
+
+Users receive a signed JWT on register / login. Token includes:
+
+sub (user id)
+
+name
+
+role
+
+iss, aud, exp
+
+JWT validation is enforced server-side:
+
+Issuer
+
+Audience
+
+Signature
+
+Expiration
+
+Protected endpoints require:
+
+Authorization: Bearer <JWT>
+
+Admin Protection (Key-Based)
+
+Admin endpoints are protected via a server-side filter. Requests must include:
+
+X-ADMIN-KEY: <configured_admin_key>
+
+
+Loaded from environment/config
+
+Invalid or missing key is rejected before controller execution
+
+Admin security is independent of frontend logic
+
+🧠 AI Integration (Live + Automatic Mock Fallback)
+
+The backend integrates with a real AI provider (OpenAI) to generate lesson content.
+
+To keep local usage robust:
+
+Live AI mode (default): uses OpenAI for real responses
+
+Mock fallback: if API key is missing, network fails, or provider errors occur — the backend returns a deterministic mock lesson
+
+This ensures the application remains functional even when external AI services are unavailable.
+
+🧠 Error Handling Strategy
+
+All backend errors return a consistent ProblemDetails format.
+
+Error Type	HTTP Status
+Validation errors	400
+Business rule violations	400
+Unauthorized	401
+Not Found	404
+Data conflicts	409
+Unhandled server errors	500
+
+Frontend distinguishes between:
+
+Expected errors (4xx) – displayed inline
+
+Unexpected errors (network / 5xx) – displayed with traceId when available
+
+🔗 Key API Endpoints (High Level)
+User
+
+POST /api/users/register
+
+POST /api/users/login
+
+GET /api/users/me (JWT required)
+
+Prompts + History
+
+POST /api/prompts
+
+GET /api/prompts/history?userId={id}
+
+Admin
+
+GET /api/admin/users?page=1&pageSize=10&search=...
+
+GET /api/admin/users/{userId}/prompts?page=1&pageSize=10&search=...
+
+🗂️ Project Structure
 ai-learning-platform/
 ├── backend/
-│ └── LearningPlatform.Api/
+│   └── LearningPlatform.Api/
 ├── frontend/
-│ └── src/
-│ ├── pages/
-│ ├── components/
-│ ├── api/
-│ ├── utils/
-│ └── App.jsx
+│   └── src/
+│       ├── pages/
+│       ├── components/
+│       ├── api/
+│       ├── utils/
+│       └── App.jsx
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
 
-yaml
-Copy code
+🐳 Running the Project Locally
+Prerequisites
 
----
+Docker
 
-## 🐳 Running the Project Locally
+Docker Compose
 
-### Prerequisites
-- Docker
-- Docker Compose
-- Node.js
+Node.js (v18+)
 
-### Backend
-```bash
+Backend (Docker)
 docker compose up --build
-Swagger UI: http://localhost:8080/swagger
 
-Frontend
-bash
-Copy code
+
+API: http://localhost:8080
+
+Swagger: http://localhost:8080/swagger
+
+Frontend (Local Dev)
 cd frontend
 npm install
 npm run dev
+
+
 Frontend: http://localhost:5173
 
+⚙️ Environment Configuration
+
+Example .env:
+
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=learning_platform
+DB_USER=root
+DB_PASSWORD=example
+
+# Admin
+ADMIN_KEY=super-secret-admin-key
+
+# AI
+OPENAI_API_KEY=optional
+
+# Frontend
+VITE_API_BASE_URL=http://localhost:8080
+
+
+⚠️ Do not commit real environment files.
+
+📌 Assumptions & Limitations
+
+JWT authentication is fully implemented for user access
+
+Admin auth is key-based (role-based admin via JWT claims can be added later)
+
+Categories are seeded programmatically
+
+Automated tests are planned but not included in this MVP
+
 🚀 Future Improvements
-JWT-based authentication & authorization
 
-Advanced admin filtering
+Role-based admin permissions via JWT claims
 
-Automated unit & integration tests
+Advanced admin filtering + sorting
 
-Frontend Dockerization
+Unit + integration tests
 
-UI/UX refinement
+Full frontend Dockerization
 
-Cloud deployment
+CI/CD + cloud deployment
 
 👩‍💻 Author
-Developed as part of an AI-Driven Learning Platform – Mini MVP task
-to demonstrate full-stack architecture, API design, and frontend-backend integration skills.
 
-yaml
-Copy code
+Developed as part of an AI-Driven Learning Platform – Mini MVP
+to demonstrate architectural thinking, backend robustness, and full-stack integration.

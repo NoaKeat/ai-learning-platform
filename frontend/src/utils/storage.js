@@ -6,6 +6,23 @@ function notifyAuthChanged() {
   window.dispatchEvent(new Event("auth-changed"));
 }
 
+
+export function getToken() {
+  return localStorage.getItem("token") || "";
+}
+
+export function setToken(token) {
+  if (!token) return;
+  localStorage.setItem("token", String(token));
+  notifyAuthChanged();
+}
+
+export function clearToken() {
+  localStorage.removeItem("token");
+  notifyAuthChanged();
+}
+
+// --- user helpers ---
 export function setUser(user) {
   if (!user) return;
 
@@ -17,19 +34,18 @@ export function setUser(user) {
   if (user.name != null) localStorage.setItem("userName", String(user.name));
   if (user.phone != null) localStorage.setItem("userPhone", String(user.phone));
 
-  // ✅ notify App.jsx to re-check auth immediately
-  window.dispatchEvent(new Event("auth-changed"));
+  notifyAuthChanged();
 }
 
 export function clearUser() {
   localStorage.removeItem("userId");
   localStorage.removeItem("userName");
   localStorage.removeItem("userPhone");
-  window.dispatchEvent(new Event("auth-changed"));
+  localStorage.removeItem("token"); // ✅ חשוב עם JWT
+  notifyAuthChanged();
 }
 
 export function getUserId() {
   const v = localStorage.getItem("userId");
   return v ? Number(v) : null;
 }
-
