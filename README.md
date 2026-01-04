@@ -30,6 +30,19 @@ Secure access to admin endpoints (server-side enforced)
 View all registered users (server-side pagination)
 
 View learning history per user
+ 🧭 Approach
+
+This Mini MVP was designed as a small but production-oriented system, with a strong emphasis on clean architecture, clear separation of concerns, and real-world backend practices.
+
+ASP.NET Core was selected for its strong typing, built-in dependency injection, robust middleware pipeline, and first-class support for authentication and API design.
+
+Authentication is handled using JWT Bearer tokens, enforcing validation on issuer, audience, signature, and expiration. User access and admin access are intentionally separated to avoid coupling critical security logic to frontend behavior.
+
+Admin endpoints are protected using a server-side admin key filter, ensuring administrative access remains strictly controlled and independent of user authentication flows.
+
+AI integration is encapsulated behind a dedicated service layer. A deterministic mock fallback is provided to ensure the system remains fully functional even when external AI services are unavailable, improving reliability during local development and testing.
+
+The overall goal was to deliver a maintainable, extensible, and production-minded architecture rather than a feature-heavy prototype.
 
 🧱 System Architecture
 Backend
@@ -222,13 +235,29 @@ VITE_API_BASE_URL=http://localhost:8080
 
 📌 Assumptions & Limitations
 
-JWT authentication is fully implemented for user access
+  Automated tests are intentionally not included in this Mini MVP,
 
-Admin auth is key-based (role-based admin via JWT claims can be added later)
+  due to the limited timeframe of the assignment.
 
-Categories are seeded programmatically
 
-Automated tests are planned but not included in this MVP
+  The focus of this assignment was on clean architecture, API correctness,
+
+  authentication flows, and end-to-end system behavior.
+
+  Given the limited scope and timeframe, priority was given to building
+
+  a production-oriented backend and a fully integrated frontend.
+
+  The architecture and service boundaries were designed to allow
+
+  straightforward addition of unit and integration tests in future iterations.
+
+  The codebase was structured to enable easy addition of unit tests
+
+  for services and integration tests for critical API flows.
+
+
+
 
 🚀 Future Improvements
 

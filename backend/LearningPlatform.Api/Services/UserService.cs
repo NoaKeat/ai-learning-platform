@@ -59,7 +59,7 @@ public class UserService : IUserService
     {
         var user = await _db.Users.FindAsync(id);
         if (user == null)
-            throw NotFoundException.User(id); // ✅ במקום להחזיר null
+            throw NotFoundException.User(id); 
 
         return new UserResponse
         {

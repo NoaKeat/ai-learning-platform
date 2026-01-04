@@ -24,7 +24,6 @@ export default function Admin() {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // pagination
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
   const [totalUsers, setTotalUsers] = useState(0);
@@ -34,7 +33,6 @@ export default function Admin() {
     [totalUsers]
   );
 
-  // ✅ NEW: "Showing X–Y of Z"
   const fromUser = useMemo(
     () => (totalUsers === 0 ? 0 : (currentPage - 1) * usersPerPage + 1),
     [currentPage, usersPerPage, totalUsers]
@@ -45,20 +43,15 @@ export default function Admin() {
     [currentPage, usersPerPage, totalUsers]
   );
 
-  // ui state
   const [isLoading, setIsLoading] = useState(true);
 
-  // expected errors
   const [error, setError] = useState(null);
 
-  // unexpected only
   const [unexpectedError, setUnexpectedError] = useState(null);
 
-  // modal
   const [selectedUser, setSelectedUser] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // auth checks (user logged-in + admin key exists)
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     if (!userId) {
@@ -85,13 +78,11 @@ export default function Admin() {
       qs.set("pageSize", String(usersPerPage));
       if (searchQuery.trim()) qs.set("search", searchQuery.trim());
 
-      // goes through adminApi -> adminFetch -> unified errors
       const data = await getAdminUsers(qs.toString());
 
       setUsers(Array.isArray(data?.items) ? data.items : []);
       setTotalUsers(Number(data?.total ?? data?.totalCount ?? data?.Total ?? 0));
     } catch (err) {
-      // unexpected only (network/5xx/etc.)
       if (isUnexpectedError(err)) {
         setUnexpectedError(err);
         setUsers([]);
@@ -99,7 +90,6 @@ export default function Admin() {
         return;
       }
 
-      // expected-ish (invalid key / misconfig / 4xx)
       setError(err?.message || "Failed to load admin users.");
       setUsers([]);
       setTotalUsers(0);
@@ -130,7 +120,6 @@ export default function Admin() {
           <h1 className="text-3xl font-bold text-slate-800">Admin – Users</h1>
         </div>
 
-        {/* unexpected only */}
         <UnexpectedErrorAlert error={unexpectedError} />
 
         <Card className="mb-6">
@@ -177,7 +166,6 @@ export default function Admin() {
                   }}
                 />
 
-                {/* ✅ Pagination + Showing X–Y of Z */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-t bg-slate-50">
                   <span className="text-sm text-slate-600">
                     Showing <strong>{fromUser}</strong>–<strong>{toUser}</strong> of{" "}

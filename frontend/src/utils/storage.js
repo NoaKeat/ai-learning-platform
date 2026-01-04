@@ -22,11 +22,9 @@ export function clearToken() {
   notifyAuthChanged();
 }
 
-// --- user helpers ---
 export function setUser(user) {
   if (!user) return;
 
-  // Normalize id
   const id = user.id ?? user.userId ?? user.Id;
   if (id == null) throw new Error("Missing user id");
 
@@ -41,7 +39,7 @@ export function clearUser() {
   localStorage.removeItem("userId");
   localStorage.removeItem("userName");
   localStorage.removeItem("userPhone");
-  localStorage.removeItem("token"); // ✅ חשוב עם JWT
+  localStorage.removeItem("token"); 
   notifyAuthChanged();
 }
 

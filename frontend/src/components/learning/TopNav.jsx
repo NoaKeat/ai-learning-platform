@@ -14,7 +14,6 @@ import {
 
 import { BookOpen, LogOut, Phone, Shield } from "lucide-react";
 
-// ✅ משתמשים ב-storage שלך (כמו שביקשת “לא לפגוע בדברים”)
 import { clearUser, getUserName } from "../../utils/storage";
 
 export default function TopNav() {
@@ -23,7 +22,6 @@ export default function TopNav() {
 
   const isLearnPage = pathname === "/learn";
 
-  // ✅ אותם שמות שמורים ב-localStorage אצלך
   const userName = getUserName() || "User";
   const userPhone = localStorage.getItem("userPhone") || "";
 
@@ -44,7 +42,6 @@ export default function TopNav() {
   };
 
   const openAdminAuth = () => {
-    // Learn.jsx יאזין לזה ויפתח modal
     window.dispatchEvent(new CustomEvent("open-admin-auth"));
   };
 
@@ -52,7 +49,6 @@ export default function TopNav() {
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link to="/learn" className="flex items-center gap-3 group">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50 group-hover:shadow-indigo-300/50 transition-shadow">
               <BookOpen className="w-5 h-5 text-white" />
@@ -62,9 +58,7 @@ export default function TopNav() {
             </span>
           </Link>
 
-          {/* Navigation Links */}
           <div className="hidden md:flex items-center gap-2">
-            {/* ✅ במקום כפתור Learn שהיה - כפתור Admin רק ב-Learn */}
             {isLearnPage && (
               <Button
                 variant="outline"
@@ -76,7 +70,6 @@ export default function TopNav() {
               </Button>
             )}
 
-            {/* אם את רוצה בעתיד כפתור חזרה ל-Learn מדפים אחרים - אפשר להחזיר */}
             {!isLearnPage && (
               <Link to="/learn">
                 <Button
@@ -89,7 +82,6 @@ export default function TopNav() {
             )}
           </div>
 
-          {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

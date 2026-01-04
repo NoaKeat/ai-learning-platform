@@ -27,16 +27,13 @@ import moment from "moment";
 export default function UserHistoryModal({ user, isOpen, onClose }) {
   const userId = user?.id;
 
-  // paging + search בתוך מודאל
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [search, setSearch] = useState("");
 
-  // data
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
 
-  // ui
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [unexpectedError, setUnexpectedError] = useState(null);
@@ -46,7 +43,6 @@ export default function UserHistoryModal({ user, isOpen, onClose }) {
     [total, pageSize]
   );
 
-  // ✅ פונקציה אחת שעושה fetch עם פרמטרים מפורשים (בלי להסתמך על closure)
   const fetchHistoryWith = useCallback(
     async ({ userIdArg, pageArg, searchArg }) => {
       if (!userIdArg) return;
@@ -81,19 +77,15 @@ export default function UserHistoryModal({ user, isOpen, onClose }) {
     [pageSize]
   );
 
-  // ✅ 1) פתיחה / החלפת משתמש => תמיד page=1, search=""
   useEffect(() => {
     if (!isOpen || !userId) return;
 
-    // reset UI state
     setPage(1);
     setSearch("");
 
-    // fetch מיידי עם ערכים מפורשים (לא מחכה ל-state)
     fetchHistoryWith({ userIdArg: userId, pageArg: 1, searchArg: "" });
   }, [isOpen, userId, fetchHistoryWith]);
 
-  // ✅ 2) אם המשתמש משנה page/search בזמן שהמודאל פתוח – נטען לפי ה-state
   useEffect(() => {
     if (!isOpen || !userId) return;
 
@@ -151,7 +143,7 @@ export default function UserHistoryModal({ user, isOpen, onClose }) {
             </Button>
           </div>
 
-          {/* Search בתוך המודאל */}
+          
           <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
@@ -222,7 +214,6 @@ export default function UserHistoryModal({ user, isOpen, onClose }) {
                 </div>
               </ScrollArea>
 
-              {/* Pagination */}
               <div className="flex items-center justify-between mt-4">
                 <Button variant="outline" disabled={page === 1 || loading} onClick={() => setPage((p) => p - 1)}>
                   Previous

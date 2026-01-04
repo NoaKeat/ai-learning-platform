@@ -27,8 +27,7 @@ public class TokenService : ITokenService
         var audience = jwt["Audience"];
         
 
-        // issuer/audience אפשר להשאיר null אם לא בודקים אותם ב-TokenValidationParameters,
-        // אבל אם את כן בודקת - עדיף לוודא שהם קיימים:
+        
         if (string.IsNullOrWhiteSpace(issuer))
             throw new InvalidOperationException("JWT configuration error: Jwt:Issuer is missing.");
 

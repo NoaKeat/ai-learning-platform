@@ -14,7 +14,7 @@ public class AdminController : ControllerBase
     private readonly IAdminService _admin;
     public AdminController(IAdminService admin) => _admin = admin;
 
-    // GET /api/admin/users?page=1&pageSize=10&search=...
+
     [HttpGet("users")]
     public async Task<ActionResult<PagedResponse<AdminUserDto>>> Users(
         [FromQuery] int page = 1,
@@ -25,7 +25,7 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
-    // ✅ GET /api/admin/users/{userId}/prompts?page=1&pageSize=10&search=...
+
     [HttpGet("users/{userId:int}/prompts")]
     public async Task<ActionResult<PagedResponse<PromptResponse>>> UserPrompts(
         [FromRoute] int userId,

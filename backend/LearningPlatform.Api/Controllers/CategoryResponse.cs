@@ -15,7 +15,7 @@ public class CategoriesController : ControllerBase
         _categories = categories;
     }
 
-    // GET /api/categories
+   
     [HttpGet]
     public async Task<ActionResult<List<CategoryResponse>>> GetAll()
     {
@@ -23,7 +23,7 @@ public class CategoriesController : ControllerBase
         return Ok(result);
     }
 
-    // GET /api/categories/by-name/{name}
+    
     [HttpGet("by-name/{name}")]
     public async Task<ActionResult<CategoryResponse>> GetByName(string name)
     {

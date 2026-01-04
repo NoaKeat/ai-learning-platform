@@ -10,7 +10,6 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ Fail fast for JWT config (מוקדם!)
 var jwt = builder.Configuration.GetSection("Jwt");
 var rawJwtKey = jwt["Key"];
 
@@ -23,7 +22,7 @@ if (string.IsNullOrWhiteSpace(rawJwtKey) || Encoding.UTF8.GetByteCount(rawJwtKey
 
 var signingKeyBytes = Encoding.UTF8.GetBytes(rawJwtKey);
 
-// ✅ Auth
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -39,11 +38,9 @@ builder.Services
             ValidAudience = jwt["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(signingKeyBytes),
 
-            // אפשר 0 או 2 דקות; 2 דקות עוזר במכונות שונות
             ClockSkew = TimeSpan.FromMinutes(2)
         };
 
-        // ✅ Debug + Fix: לנקות Authorization header לפני parsing
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = ctx =>
@@ -63,7 +60,6 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// ✅ CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
@@ -76,7 +72,6 @@ builder.Services.AddCors(options =>
     );
 });
 
-// ✅ DI
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IPromptService, PromptService>();
@@ -86,7 +81,6 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAiService, OpenAiService>();
 
-// ✅ Controllers + validation filter
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationExceptionFilter>();
@@ -97,7 +91,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.SuppressModelStateInvalidFilter = true;
 });
 
-// ✅ Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -107,7 +100,6 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1"
     });
 
-    // 🔐 JWT Bearer definition (Swagger יוסיף Bearer לבד!)
     options.AddSecurityDefinition("Bearer", new()
     {
         Name = "Authorization",
@@ -118,7 +110,6 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Paste ONLY the JWT token here (without the word 'Bearer')."
     });
 
-    // 🔐 Apply JWT globally
     options.AddSecurityRequirement(new()
     {
         {
@@ -135,7 +126,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ✅ DB connection (כמו אצלך)
 var connFromConfig = builder.Configuration.GetConnectionString("DefaultConnection");
 
 var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
@@ -174,20 +164,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// ✅ Exceptions first
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// ✅ Swagger (dev)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// ✅ CORS early
 app.UseCors("Frontend");
 
-// ✅ DB migrate/seed
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -212,14 +198,11 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// אם בדוקר עושה בעיות רידיירקט — אפשר להסיר
 app.UseHttpsRedirection();
 
-// ✅ Auth
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ✅ Controllers
 app.MapControllers();
 
 app.Run();

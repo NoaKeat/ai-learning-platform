@@ -16,11 +16,11 @@ public class PromptsController : ControllerBase
         _promptService = promptService;
     }
 
-    // POST /api/prompts
+
     [HttpPost]
     public async Task<ActionResult<PromptResponse>> Create([FromBody] PromptCreateRequest dto)
     {
-        // ה-ValidationExceptionFilter שלך יתפוס ModelState לא תקין ויזרוק BadRequestException (400) בצורה אחידה
+        // ה-ValidationExceptionFilter שלך יתפוס ModelState לא תקין ויזרוק BadRequestException (400) בצורה 
         var result = await _promptService.CreatePromptAsync(dto);
         return Ok(result);
     }
@@ -31,7 +31,7 @@ public class PromptsController : ControllerBase
     {
         if (userId <= 0)
         {
-            // במקום ProblemDetails ידני — זורקים ApiException וה-Middleware מחזיר ProblemDetails אחיד
+
             throw new BadRequestException(
                 code: "VALIDATION_ERROR",
                 message: "userId must be a positive integer.",

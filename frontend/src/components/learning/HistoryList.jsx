@@ -17,12 +17,10 @@ export default function HistoryList({
 }) {
   const didAutoLoadRef = useRef(false);
 
-  // ✅ AUTO LOAD פעם אחת בכניסה למסך
   useEffect(() => {
     if (didAutoLoadRef.current) return;
     didAutoLoadRef.current = true;
 
-    // אל תרוץ אם אין callback
     if (typeof onRefresh === "function") {
       onRefresh();
     }

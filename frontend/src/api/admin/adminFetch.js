@@ -34,7 +34,6 @@ export async function adminFetch(path, options = {}) {
     });
   }
 
-  // invalid admin key => clear it
   if (res.status === 401 || res.status === 403) {
     clearAdminKey();
   }

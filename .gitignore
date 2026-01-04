@@ -1,28 +1,22 @@
-# ===== Database dumps =====
 *.db
 *.sql
 
-# ===== Secrets / Config =====
 .env
 appsettings.Local.json
 appsettings.Development.json
 *.secret.json
 
-# ===== .NET =====
 bin/
 obj/
 *.dll
 *.exe
 *.pdb
 
-# ===== Visual Studio =====
 .vs/
 *.user
 *.suo
 
-# ===== IDEs =====
 .idea/
 
-# ===== OS =====
 .DS_Store
 Thumbs.db

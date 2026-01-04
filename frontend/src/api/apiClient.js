@@ -3,7 +3,6 @@ import { clearUser, getToken } from "../utils/storage";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-/* -------------------- Helpers -------------------- */
 function ensureBaseUrl() {
   if (!BASE_URL) {
     throw new Error(
@@ -66,12 +65,10 @@ function isSuccessStatus(status) {
   return (status >= 200 && status < 300) || status === 304;
 }
 
-// ✅ helper: endpoints שלא צריכים Authorization בכלל
 function isPublicEndpoint(path) {
   return path === endpoints.login || path === endpoints.register;
 }
 
-/* -------------------- Core request -------------------- */
 async function request(path, options = {}) {
   ensureBaseUrl();
 
@@ -96,9 +93,7 @@ async function request(path, options = {}) {
 
   const data = res.status === 304 ? null : await safeJson(res);
 
-  // ✅ אם JWT לא תקין/פג תוקף — מנקים הכל כדי שה־UI יתעדכן
   if (res.status === 401) {
-    // clearUser מוחק גם token וגם userId/userName/phone ומרים auth-changed
     if (typeof clearUser === "function") clearUser();
     else localStorage.removeItem("token");
   }
@@ -110,9 +105,7 @@ async function request(path, options = {}) {
   return data ?? null;
 }
 
-/* -------------------- Public API -------------------- */
 export const api = {
-  // Users
   register: (payload) =>
     request(endpoints.register, {
       method: "POST",
@@ -130,10 +123,8 @@ export const api = {
       method: "GET",
     }),
 
-  // Categories
   getCategories: () => request(endpoints.categories),
 
-  // Prompts
   createPrompt: (payload) =>
     request(endpoints.createPrompt, {
       method: "POST",

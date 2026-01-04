@@ -17,7 +17,7 @@ public class AdminKeyAttribute : Attribute, IAsyncActionFilter
             cfg["Admin:Key"] ??
             Environment.GetEnvironmentVariable("ADMIN_KEY");
 
-        // 🔴 Server misconfiguration
+
         if (string.IsNullOrWhiteSpace(expected))
         {
             throw new ConflictException(
@@ -26,7 +26,6 @@ public class AdminKeyAttribute : Attribute, IAsyncActionFilter
             );
         }
 
-        // 🔴 Missing / invalid admin key
         if (!context.HttpContext.Request.Headers.TryGetValue("X-ADMIN-KEY", out var provided) ||
             string.IsNullOrWhiteSpace(provided) ||
             !string.Equals(provided.ToString(), expected, StringComparison.Ordinal))

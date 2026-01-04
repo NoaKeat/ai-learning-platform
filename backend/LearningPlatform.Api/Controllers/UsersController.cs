@@ -25,7 +25,7 @@ public class UsersController : ControllerBase
     {
         var user = await _users.RegisterUserAsync(req);
 
-        // ברירת מחדל: משתמש רגיל (אם יש לך user.IsAdmin - עדיף להעביר אותו במקום false)
+
         var token = _tokens.CreateToken(user.Id, user.Name, isAdmin: false);
 
         return CreatedAtAction(
@@ -40,13 +40,12 @@ public class UsersController : ControllerBase
     {
         var user = await _users.LoginUserAsync(req);
 
-        // אם יש לך user.IsAdmin - עדיף להעביר אותו במקום false
+
         var token = _tokens.CreateToken(user.Id, user.Name, isAdmin: false);
 
         return Ok(new AuthResponse(user, token));
     }
 
-    // ✅ בדיקת JWT תקינה: endpoint שמחזיר את המשתמש המחובר
     [Authorize]
     [HttpGet("me")]
     public async Task<ActionResult<UserResponse>> Me()
@@ -59,7 +58,7 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-    // ✅ חשוב: אם לא רוצים חשיפת משתמשים ללא JWT – מגינים על זה
+
     [Authorize]
     [HttpGet("{id:int}")]
     public async Task<ActionResult<UserResponse>> GetById(int id)

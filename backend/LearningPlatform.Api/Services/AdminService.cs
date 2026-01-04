@@ -20,7 +20,7 @@ public class AdminService : IAdminService
         {
             search = search.Trim();
 
-            // ✅ when numeric: search by BOTH (ID exact) OR (Phone contains)
+            
             if (int.TryParse(search, out var id))
             {
                 q = q.Where(u =>

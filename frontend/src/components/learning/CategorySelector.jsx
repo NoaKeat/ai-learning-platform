@@ -23,8 +23,7 @@ export default function CategorySelector({
   const safeCategories = categories || [];
 
   const computedSubCats = useMemo(() => {
-    if (subCategories) return subCategories; // ✅ תואם לישן: מגיע מההורה
-    // ✅ השוואה בטוחה גם אם אחד string ואחד number
+    if (subCategories) return subCategories; 
     const selected = safeCategories.find((c) => String(c.id) === String(selectedCategoryId || ""));
     return selected?.subCategories || [];
   }, [subCategories, safeCategories, selectedCategoryId]);
@@ -55,16 +54,13 @@ export default function CategorySelector({
 
   return (
     <div className="space-y-4">
-      {/* Category */}
       <div className="space-y-2">
         <Label className="text-slate-700 font-medium flex items-center gap-2">
           <FolderTree className="w-4 h-4 text-indigo-500" />
           Category
         </Label>
         <Select
-          // ✅ תמיד controlled: "" במקום undefined
           value={selectedCategoryId != null ? String(selectedCategoryId) : ""}
-          // ✅ לא משנה UI, רק מעביר value למעלה
           onValueChange={(value) => onCategoryChange?.(value)}
         >
           <SelectTrigger className="h-11 bg-white border-slate-200 hover:border-slate-300 focus:ring-indigo-200">
@@ -80,14 +76,12 @@ export default function CategorySelector({
         </Select>
       </div>
 
-      {/* SubCategory */}
       <div className="space-y-2">
         <Label className="text-slate-700 font-medium flex items-center gap-2">
           <Layers className="w-4 h-4 text-purple-500" />
           Sub-Category
         </Label>
         <Select
-          // ✅ תמיד controlled: "" במקום undefined
           value={selectedSubCategoryId != null ? String(selectedSubCategoryId) : ""}
           onValueChange={(value) => onSubCategoryChange?.(value)}
           disabled={!selectedCategoryId || computedSubCats.length === 0}

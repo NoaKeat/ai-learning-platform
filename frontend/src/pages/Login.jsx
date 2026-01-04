@@ -153,10 +153,8 @@ export default function Login() {
               </motion.div>
             )}
 
-            {/* ❌ only unexpected errors */}
             <UnexpectedErrorAlert error={unexpectedError} />
 
-            {/* ✅ expected general errors */}
             {errors.general && (
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                 <Alert variant="destructive" className="mb-6 border-red-200 bg-red-50" aria-live="polite">

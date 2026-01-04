@@ -24,10 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, AlertCircle, Loader2 } from "lucide-react";
 
-/* ================== Admin Lock Config ================== */
 const MAX_ADMIN_ATTEMPTS = 3;
 const ADMIN_LOCK_MINUTES = 5;
-/* ======================================================= */
 
 export default function Learn() {
   const userId = localStorage.getItem("userId");
@@ -55,14 +53,12 @@ export default function Learn() {
 
   const isAdminLocked = () => adminLockedUntil && Date.now() < adminLockedUntil;
 
-  /* auto hide admin alert */
   useEffect(() => {
     if (!adminDeniedMessage) return;
     const t = setTimeout(() => setAdminDeniedMessage(""), 5000);
     return () => clearTimeout(t);
   }, [adminDeniedMessage]);
 
-  /* listen to TopNav admin click */
   useEffect(() => {
     const open = () => {
       setAdminKeyInput("");
@@ -72,7 +68,6 @@ export default function Learn() {
     return () => window.removeEventListener("open-admin-auth", open);
   }, []);
 
-  /* ---------- Categories ---------- */
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState("");
@@ -81,14 +76,12 @@ export default function Learn() {
     const fetchCategories = async () => {
       setCategoriesLoading(true);
       setCategoriesError("");
-      // אל תנקה unexpected כאן בהתחלה כדי לא "להעלים" הודעה אמיתית בזמן טעינה
       try {
         const data = await api.getCategories();
 
         setCategories(Array.isArray(data) ? data : []);
         setCategoriesError("");
 
-        // ✅ FIX #1: אם הצליח – לנקות unexpectedError כדי שהבאנר לא ייתקע למעלה
         setUnexpectedError(null);
       } catch (err) {
         if (isUnexpectedError(err)) return setUnexpectedError(err);
@@ -101,14 +94,12 @@ export default function Learn() {
     fetchCategories();
   }, []);
 
-  /* ---------- Learning Flow ---------- */
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [lastResponse, setLastResponse] = useState(null);
 
-  /* ---------- History ---------- */
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState("");
@@ -120,7 +111,7 @@ export default function Learn() {
     setHistoryError("");
 
     try {
-      const data = await api.myHistory(Number(userId)); // ✅ נכון לפי השרת
+      const data = await api.myHistory(Number(userId)); 
       setHistory(Array.isArray(data) ? data : []);
       setUnexpectedError(null);
     } catch (err) {
@@ -145,10 +136,8 @@ export default function Learn() {
         prompt,
       });
 
-      // 1️⃣ הצגת התשובה
       setLastResponse(data);
 
-      // 2️⃣ הוספה מיידית להיסטוריה (optimistic update)
       setHistory((prev) => [
         {
           id: data.id ?? crypto.randomUUID(),
@@ -161,7 +150,6 @@ export default function Learn() {
         ...prev,
       ]);
 
-      // 3️⃣ סנכרון מהשרת (לא חובה ל-UX אבל טוב לדיוק)
       fetchHistory();
     } catch (err) {
       if (isUnexpectedError(err)) setUnexpectedError(err);
@@ -172,7 +160,6 @@ export default function Learn() {
   };
 
 
-  /* ---------- Admin Verify + Lock ---------- */
   const verifyAdminKey = async () => {
     if (isAdminLocked()) {
       setAdminDeniedMessage(
@@ -239,7 +226,6 @@ export default function Learn() {
         return;
       }
 
-      // ✅ SUCCESS
       localStorage.removeItem("adminAttempts");
       localStorage.removeItem("adminLockedUntil");
       setAdminAttempts(0);
@@ -249,7 +235,6 @@ export default function Learn() {
       window.dispatchEvent(new Event("auth-changed"));
       setAdminModalOpen(false);
 
-      // ✅ ניקוי כללי
       setUnexpectedError(null);
       setAdminDeniedMessage("");
 
@@ -263,7 +248,6 @@ export default function Learn() {
     }
   };
 
-  /* ================== RENDER ================== */
   return (
     <div className="min-h-screen">
       <TopNav />
